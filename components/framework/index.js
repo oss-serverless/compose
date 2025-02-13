@@ -190,27 +190,29 @@ class ServerlessFramework {
         stdoutResult = stdoutBuffer.toString();
       } catch (e) {
         throw new Error(
-          'Could not find the Serverless Framework CLI installation. Ensure Serverless Framework is installed before continuing.\nhttps://serverless.com/framework/docs/getting-started'
+          'Could not find the Serverless Framework CLI installation. Ensure Serverless Framework is installed before continuing.\nhttps://github.com/oss-serverless/serverless'
         );
       }
-      const matchResult = stdoutResult.match(/Framework Core: ([0-9]+\.[0-9]+\.[0-9]+)/);
-      if (matchResult) {
-        const version = matchResult[1];
-        if (doesSatisfyRequiredFrameworkVersion(version)) {
-          // Stored to avoid checking it on each invocation
-          // We ignore edge case when someone downgrades or uninstalls serverless afterwards
-          this.context.state.detectedFrameworkVersion = version;
-          this.context.save();
-        } else {
-          throw new Error(
-            `The installed version of Serverless Framework (${version}) is not supported by Compose. Please upgrade Serverless Framework to a version greater or equal to "${MINIMAL_FRAMEWORK_VERSION}"`
-          );
-        }
-      } else {
+      let matchResult = stdoutResult.match(/Framework Core: ([0-9]+\.[0-9]+\.[0-9]+)/);
+      if (!matchResult) {
+        // Support osls
+        matchResult = stdoutResult.match(/osls version: ([0-9]+\.[0-9]+\.[0-9]+)/);
+      }
+      if (!matchResult) {
         throw new Error(
-          'Could not verify the Serverless Framework CLI installation. Ensure Serverless Framework is installed before continuing.\nhttps://serverless.com/framework/docs/getting-started'
+          'Could not verify the Serverless Framework CLI installation. Ensure Serverless Framework is installed before continuing.\nhttps://github.com/oss-serverless/serverless'
         );
       }
+      const version = matchResult[1];
+      if (!doesSatisfyRequiredFrameworkVersion(version)) {
+        throw new Error(
+          `The installed version of Serverless Framework (${version}) is not supported by Compose. Please upgrade Serverless Framework to a version greater or equal to "${MINIMAL_FRAMEWORK_VERSION}"`
+        );
+      }
+      // Stored to avoid checking it on each invocation
+      // We ignore edge case when someone downgrades or uninstalls serverless afterwards
+      this.context.state.detectedFrameworkVersion = version;
+      this.context.save();
     }
   }
 
