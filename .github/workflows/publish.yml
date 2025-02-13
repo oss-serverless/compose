@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  # This job runs when a new release is published
+  release:
+    types: [published]
+
+jobs:
+
+  publish:
+    name: Publish to NPM
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Retrieve dependencies from cache
+        uses: actions/cache@v4
+        id: cacheNpm
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: npm-v22-${{ runner.os }}-refs/heads/main-${{ hashFiles('package.json') }}
+
+      - name: Install Node.js and npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          registry-url: https://registry.npmjs.org
+
+      # Normally we have a guarantee that deps are already there, still it may not be the case when:
+      # - `main` build for same commit failed (and we still pushed tag manually)
+      # - We've pushed tag manually before `main` build finalized
+      - name: Install dependencies
+        if: steps.cacheNpm.outputs.cache-hit != 'true'
+        run: |
+          npm update --no-save
+          npm update --save-dev --no-save
+
+      # Store the name of the release
+      # See https://stackoverflow.com/questions/58177786/get-the-current-pushed-tag-in-github-actions
+      - run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - run: npm version $RELEASE_VERSION --no-git-tag-version
+
+      - name: Publish new version
+        # Note: Setting NODE_AUTH_TOKEN as job|workspace wide env var won't work
+        #       as it appears actions/setup-node sets own value
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --tag=latest

@@ -1,17 +1,15 @@
-# PR's only
-
-name: Validate
+name: Tests
 
 on:
+  push:
   pull_request:
-    branches: [main]
 
 env:
   FORCE_COLOR: 1
 
 jobs:
   linuxNode16:
-    name: '[Linux] Node.js 16: Unit tests'
+    name: '[Linux] [Node 16] Tests'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -25,9 +23,7 @@ jobs:
             ~/.npm
             node_modules
           key: npm-v16-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('package.json') }}
-          restore-keys: |
-            npm-v16-${{ runner.os }}-${{ github.ref }}-
-            npm-v16-${{ runner.os }}-refs/heads/main-
+          restore-keys: npm-v16-${{ runner.os }}-${{ github.ref }}-
 
       - name: Install Node.js and npm
         uses: actions/setup-node@v1

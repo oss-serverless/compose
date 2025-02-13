@@ -1,0 +1,6 @@
+/.github
+/.editorconfig
+/.prettierignore
+/prettier.config.js
+/scripts/pkg
+/test
