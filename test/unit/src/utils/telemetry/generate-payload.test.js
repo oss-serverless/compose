@@ -7,7 +7,7 @@ const ServerlessError = require('../../../../../src/serverless-error');
 const generatePayload = require('../../../../../src/utils/telemetry/generate-payload');
 
 const versions = {
-  '@serverless/compose': require('../../../../../package').version,
+  '@osls/compose': require('../../../../../package').version,
 };
 
 describe('test/unit/lib/utils/telemetry/generate-payload.test.js', () => {
@@ -52,7 +52,7 @@ describe('test/unit/lib/utils/telemetry/generate-payload.test.js', () => {
     delete payload.ciName;
 
     expect(payload).to.deep.equal({
-      cliName: '@serverless/compose',
+      cliName: '@osls/compose',
       command: 'deploy',
       commandOptionNames: ['someoption', 'stage'],
       commandTargetComponents: ['serverless-framework'],
@@ -167,7 +167,7 @@ describe('test/unit/lib/utils/telemetry/generate-payload.test.js', () => {
     delete payload.ciName;
 
     expect(payload).to.deep.equal({
-      cliName: '@serverless/compose',
+      cliName: '@osls/compose',
       command: 'deploy',
       commandOptionNames: [],
       commandType: 'global',
@@ -242,7 +242,7 @@ describe('test/unit/lib/utils/telemetry/generate-payload.test.js', () => {
     delete payload.ciName;
 
     expect(payload).to.deep.equal({
-      cliName: '@serverless/compose',
+      cliName: '@osls/compose',
       command: 'deploy',
       commandOptionNames: [],
       commandType: 'global',

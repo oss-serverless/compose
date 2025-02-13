@@ -61,16 +61,16 @@ describe('test/unit/lib/utils/resolve-error-location.test.js', () => {
       const err = new Error('test');
       err.stack =
         'Error:\n' +
-        '    at Context.it (/home/xxx/@serverless/compose/test/unit/lib/utils/resolve-error-location.test.js:10:17)\n' +
-        '    at callFn (/home/xxx/@serverless/compose/node_modules/mocha/lib/runnable.js:366:21)\n' +
-        '    at Test.Runnable.run (/home/xxx/@serverless/compose/node_modules/mocha/lib/runnable.js:354:5)\n' +
-        '    at Runner.runTest (/home/xxx/@serverless/compose/node_modules/mocha/lib/runner.js:677:10)\n' +
-        '    at next (/home/xxx/@serverless/compose/node_modules/mocha/lib/runner.js:801:12)\n' +
-        '    at next (/home/xxx/@serverless/compose/node_modules/mocha/lib/runner.js:802:12)\n' +
-        '    at next (/home/xxx/@serverless/compose/node_modules/mocha/lib/runner.js:803:12)\n' +
-        '    at next (/home/xxx/@serverless/compose/node_modules/mocha/lib/runner.js:804:12)\n' +
-        '    at next (/home/xxx/@serverless/compose/node_modules/mocha/lib/runner.js:805:12)\n' +
-        '    at next (/home/xxx/@serverless/compose/node_modules/mocha/lib/runner.js:594:14)\n';
+        '    at Context.it (/home/xxx/@osls/compose/test/unit/lib/utils/resolve-error-location.test.js:10:17)\n' +
+        '    at callFn (/home/xxx/@osls/compose/node_modules/mocha/lib/runnable.js:366:21)\n' +
+        '    at Test.Runnable.run (/home/xxx/@osls/compose/node_modules/mocha/lib/runnable.js:354:5)\n' +
+        '    at Runner.runTest (/home/xxx/@osls/compose/node_modules/mocha/lib/runner.js:677:10)\n' +
+        '    at next (/home/xxx/@osls/compose/node_modules/mocha/lib/runner.js:801:12)\n' +
+        '    at next (/home/xxx/@osls/compose/node_modules/mocha/lib/runner.js:802:12)\n' +
+        '    at next (/home/xxx/@osls/compose/node_modules/mocha/lib/runner.js:803:12)\n' +
+        '    at next (/home/xxx/@osls/compose/node_modules/mocha/lib/runner.js:804:12)\n' +
+        '    at next (/home/xxx/@osls/compose/node_modules/mocha/lib/runner.js:805:12)\n' +
+        '    at next (/home/xxx/@osls/compose/node_modules/mocha/lib/runner.js:594:14)\n';
       const result = resolveErrorLocation(tokenizeException(err));
       expect(result).to.equal(
         [

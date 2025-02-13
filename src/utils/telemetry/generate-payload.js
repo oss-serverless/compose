@@ -54,7 +54,7 @@ module.exports = ({
 
   const usedVersions = (() => {
     return {
-      '@serverless/compose': require('../../../package').version,
+      '@osls/compose': require('../../../package').version,
     };
   })();
 
@@ -78,7 +78,7 @@ module.exports = ({
     commandType,
     outcome,
     componentsOutcomes,
-    cliName: '@serverless/compose',
+    cliName: '@osls/compose',
     ciName,
     commandOptionNames: options ? Object.keys(options).filter((key) => key !== '_') : [],
     frameworkLocalUserId: userConfig.get('frameworkId'),

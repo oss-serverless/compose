@@ -1,12 +1,12 @@
 {
-  "name": "@serverless/compose",
+  "name": "@osls/compose",
   "version": "1.3.0",
   "description": "Deploy and orchestrate multiple Serverless Framework services in monorepositories.",
   "main": "src/index.js",
   "repository": "serverless/compose",
   "bin": {
-    "serverless-compose": "./bin/serverless-compose",
-    "slsc": "./bin/serverless-compose"
+    "osls-compose": "./bin/serverless-compose",
+    "oslsc": "./bin/serverless-compose"
   },
   "scripts": {
     "lint": "eslint .",
@@ -16,7 +16,6 @@
     "pkg:build": "node ./scripts/pkg/build.js",
     "test": "mocha \"test/**/*.js\""
   },
-  "author": "serverless.com",
   "license": "MIT",
   "dependencies": {
     "@aws-sdk/client-cloudformation": "^3.137.0",
