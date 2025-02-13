@@ -4,6 +4,7 @@ const { resolve } = require('path');
 const { isEmpty, path } = require('ramda');
 const { Graph, alg } = require('graphlib');
 const traverse = require('traverse');
+const pLimit = require('p-limit');
 const ServerlessError = require('./serverless-error');
 const utils = require('./utils');
 const { loadComponent } = require('./load');
@@ -223,10 +224,12 @@ class ComponentsService {
   /**
    * @param {import('./Context')} context
    * @param configuration
+   * @param options
    */
-  constructor(context, configuration) {
+  constructor(context, configuration, options) {
     this.context = context;
     this.configuration = configuration;
+    this.options = options;
 
     // Variables that will be populated during init
     this.allComponents = null;
@@ -304,6 +307,13 @@ class ComponentsService {
     });
   }
 
+  async package(options) {
+    this.context.output.log();
+    this.context.output.log(`Packaging for stage ${this.context.stage}`);
+
+    await this.invokeComponentsInParallel('package', options);
+  }
+
   async logs(options) {
     await this.invokeComponentsInParallel('logs', options);
   }
@@ -330,16 +340,16 @@ class ComponentsService {
   }
 
   async invokeGlobalCommand(command, options) {
-    const globalCommands = ['deploy', 'remove', 'info', 'logs', 'outputs', 'refresh-outputs'];
+    const globalCommands = [
+      'deploy',
+      'remove',
+      'info',
+      'logs',
+      'outputs',
+      'refresh-outputs',
+      'package',
+    ];
     // Specific error messages for popular Framework commands
-    if (command === 'package') {
-      throw new ServerlessError(
-        `"package" is not a global command in Serverless Framework Compose.\nAvailable global commands: ${globalCommands.join(
-          ', '
-        )}.\nYou can package each Serverless Framework service by running "serverless <service-name>:${command}".`,
-        'COMMAND_NOT_FOUND'
-      );
-    }
     if (command === 'invoke') {
       throw new ServerlessError(
         `"invoke" is not a global command in Serverless Framework Compose.\nAvailable global commands: ${globalCommands.join(
@@ -391,7 +401,7 @@ class ComponentsService {
       }
       this.context.logVerbose(`Invoking "${command}" on service "${componentName}"`);
 
-      const isDefaultCommand = ['deploy', 'remove', 'logs', 'info'].includes(command);
+      const isDefaultCommand = ['deploy', 'remove', 'logs', 'info', 'package'].includes(command);
 
       if (isDefaultCommand) {
         // Default command defined for all components (deploy, logs, dev, etc.)
@@ -440,21 +450,29 @@ class ComponentsService {
     await this.instantiateComponents();
 
     this.context.logVerbose(`Executing "${method}" across all services in parallel`);
-    const promises = Object.entries(this.allComponents).map(async ([id, { instance }]) => {
-      if (typeof instance[method] !== 'function') return;
-      try {
-        await instance[method](options);
-        this.context.componentCommandsOutcomes[id] = 'success';
-      } catch (e) {
-        // If the component has an ongoing progress, we automatically set it to "error"
-        if (this.context.progresses.exists(id)) {
-          this.context.progresses.error(id, e);
-        } else {
-          this.context.output.error(formatError(e), [id]);
+    const limit = pLimit(options['max-concurrency'] || Infinity);
+
+    const promises = [];
+
+    for (const [id, { instance }] of Object.entries(this.allComponents)) {
+      const fn = async () => {
+        if (typeof instance[method] !== 'function') return;
+        try {
+          await instance[method](options);
+          this.context.componentCommandsOutcomes[id] = 'success';
+        } catch (e) {
+          // If the component has an ongoing progress, we automatically set it to "error"
+          if (this.context.progresses.exists(id)) {
+            this.context.progresses.error(id, e);
+          } else {
+            this.context.output.error(formatError(e), [id]);
+          }
+          this.context.componentCommandsOutcomes[id] = 'failure';
         }
-        this.context.componentCommandsOutcomes[id] = 'failure';
-      }
-    });
+      };
+
+      promises.push(limit(fn));
+    }
 
     await Promise.all(promises);
   }
@@ -475,6 +493,8 @@ class ComponentsService {
     if (isEmpty(nodes)) {
       return;
     }
+
+    const limit = pLimit(this.options['max-concurrency'] || Infinity);
 
     /** @type {Promise<boolean>[]} */
     const promises = [];
@@ -519,7 +539,7 @@ class ComponentsService {
         }
       };
 
-      promises.push(fn());
+      promises.push(limit(fn));
     }
 
     const results = await Promise.all(promises);

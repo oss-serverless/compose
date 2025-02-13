@@ -71,6 +71,8 @@ module.exports = ({
 
   const commandType = componentName ? 'single' : 'global';
 
+  const stage = (options && options.stage) || 'dev';
+
   const payload = {
     command,
     commandType,
@@ -81,6 +83,7 @@ module.exports = ({
     commandOptionNames: options ? Object.keys(options).filter((key) => key !== '_') : [],
     frameworkLocalUserId: userConfig.get('frameworkId'),
     interruptSignal,
+    stage,
     timestamp: Date.now(),
     timezone,
     versions: usedVersions,
@@ -120,7 +123,7 @@ module.exports = ({
           return serviceDefinition.dependsOn.length;
         })();
         return {
-          type: serviceDefinition.type || 'serverless-framework',
+          type: serviceDefinition.component || 'serverless-framework',
           dependsOnCount,
           paramsCount: Object.values(serviceDefinition.params || {}).length,
         };
@@ -132,10 +135,10 @@ module.exports = ({
         if (!configuration.services[componentName]) {
           return ['unknown'];
         }
-        return [configuration.services[componentName].type || 'serverless-framework'];
+        return [configuration.services[componentName].component || 'serverless-framework'];
       }
       return Object.values(configuration.services).map(
-        (serviceDefinition) => serviceDefinition.type || 'serverless-framework'
+        (serviceDefinition) => serviceDefinition.component || 'serverless-framework'
       );
     })();
 
