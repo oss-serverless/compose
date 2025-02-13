@@ -72,8 +72,6 @@ const resolveConfigurationVariables = async (
           '", "'
         )}" are Serverless Framework-specific sources that are not supported in "${configurationFilename}"`;
       }
-      errorMessage +=
-        '\nYou can search and/or open feature requests here: https://github.com/serverless/compose';
     }
 
     throw new ServerlessError(errorMessage, 'UNRECOGNIZED_VARIABLE_SOURCES');

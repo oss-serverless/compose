@@ -18,11 +18,6 @@ module.exports = (exception, output) => {
     `Environment: ${platform}, node ${nodeVersion}, compose ${slscVersion}`,
   ];
 
-  detailsTextTokens.push(
-    'Docs:        slss.io/docs-compose',
-    'Bugs:        github.com/serverless/compose/issues'
-  );
-
   output.log(colors.gray(detailsTextTokens.join('\n')));
   output.log();
 
