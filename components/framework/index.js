@@ -15,6 +15,25 @@ const MINIMAL_FRAMEWORK_VERSION = '3.7.7';
 const doesSatisfyRequiredFrameworkVersion = (version) =>
   semver.gte(version, MINIMAL_FRAMEWORK_VERSION);
 
+const commandTextMap = new Map([
+    ['deploy:function', ['deploying function', 'deployed']],
+    ['deploy:list', ['listing deployments', 'listed']],
+    ['rollback:function', ['rolling back', 'rolled back']],
+    ['invoke', ['invoking', 'invoked']],
+    ['invoke:local', ['invoking', 'invoked']],
+])
+
+/**
+ * Rather than do boilerplate, just create a command with a given name and 
+ * forward that directly on to serverless.
+ */
+const commandsMemo = (cmdNames, inst) => cmdNames.reduce((iter, cmdName) => ({
+  ...iter,
+  [cmdName]: {
+    handler: (options) => inst.command(cmdName, options)
+  }
+}), {});
+
 class ServerlessFramework {
   /**
    * @param {string} id
@@ -26,6 +45,10 @@ class ServerlessFramework {
     this.inputs = inputs;
     this.context = context;
 
+    this.commands = {
+      ...(commandsMemo(Array.from(commandTextMap.keys()), this))
+    };
+
     if (path.relative(process.cwd(), inputs.path) === '') {
       throw new ServerlessError(
         `Service "${id}" cannot have a "path" that points to the root directory of the Serverless Framework Compose project`,
@@ -34,20 +57,16 @@ class ServerlessFramework {
     }
   }
 
-  // TODO:
-  // Component-specific commands
-  // In the long run, they should be generated based on configured command schema
-  // and options schema for each command
-  // commands = {
-  //   print: {
-  //     handler: async () => await this.command(['print']),
-  //   },
-  //   package: {
-  //     handler: async () => await this.command(['package']),
-  //   },
-  // };
-  // For now the workaround is to just pray that the command is correct and rely on validation from the Framework
-  async command(command, options) {
+  /**
+   * Runs the command with specified parameters using the serverless CLI command.
+   * @param {string} command The command name
+   * @param {object} options The command line options
+   * @returns Promise The result of the execution of the CLI command.
+   */
+  async command(command, options = {}) {
+    let [startText, endText] = commandTextMap.get(command) ?? [null, null];
+    startText && this.context.startProgress(startText);
+
     const cliparams = Object.entries(options)
       .filter(([key]) => key !== 'stage')
       .flatMap(([key, value]) => {
@@ -62,8 +81,12 @@ class ServerlessFramework {
         }
         return `--${key}=${value}`;
       });
+
     const args = [...command.split(':'), ...cliparams];
-    return await this.exec('serverless', args, true);
+    const result = await this.exec('serverless', args, true);
+
+    endText && this.context.startProgress(endText);
+    return result;
   }
 
   async deploy() {
@@ -87,6 +110,7 @@ class ServerlessFramework {
 
     const hasOutputs = this.context.outputs && Object.keys(this.context.outputs).length > 0;
     const hasChanges = !deployOutput.includes('No changes to deploy. Deployment skipped.');
+    
     // Skip retrieving outputs via `sls info` if we already have outputs (faster)
     if (hasChanges || !hasOutputs) {
       await this.context.updateOutputs(await this.retrieveOutputs());
@@ -118,9 +142,7 @@ class ServerlessFramework {
 
   async package() {
     this.context.startProgress('packaging');
-
     await this.exec('serverless', ['package']);
-
     this.context.successProgress('packaged');
   }
 
@@ -223,6 +245,7 @@ class ServerlessFramework {
     await this.ensureFrameworkVersion();
     // Add stage
     args.push('--stage', this.context.stage);
+
     // Add config file name if necessary
     if (this.inputs && this.inputs.config) {
       args.push('--config', this.inputs.config);
