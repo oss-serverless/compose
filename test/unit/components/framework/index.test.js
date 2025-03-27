@@ -8,7 +8,7 @@ const ComponentContext = require('../../../../src/ComponentContext');
 const { validateComponentInputs } = require('../../../../src/configuration/validate');
 const { configSchema } = require('../../../../components/framework/configuration');
 const ServerlessFramework = require('../../../../components/framework');
-
+const { describe, it } = require('mocha');
 // Configure chai
 chai.use(require('chai-as-promised'));
 chai.use(require('sinon-chai'));
@@ -85,15 +85,23 @@ describe('test/unit/components/framework/index.test.js', () => {
     const context = await getContext();
     const component = new FrameworkComponent('some-id', context, { path: 'path' });
     context.state.detectedFrameworkVersion = '9.9.9';
-    await component.deploy();
+    await component.command('deploy:function', {
+      function: 'testFunction',
+      stage: 'test',
+      service: 'test',
+    });
 
-    expect(spawnStub).to.be.calledTwice;
-    expect(spawnStub.getCall(0).args[0]).to.equal('serverless');
-    expect(spawnStub.getCall(0).args[1]).to.deep.equal(['deploy', '--stage', 'dev']);
-    expect(spawnStub.getCall(0).args[2].cwd).to.equal('path');
-    expect(spawnStub.getCall(1).args[0]).to.equal('serverless');
-    expect(spawnStub.getCall(1).args[1]).to.deep.equal(['info', '--verbose', '--stage', 'dev']);
-    expect(spawnStub.getCall(1).args[2].cwd).to.equal('path');
+    expect(spawnStub).to.be.calledOnce;
+    expect(spawnStub.firstCall.firstArg).to.equal('serverless');
+    expect(spawnStub.firstCall.args[1]).to.deep.equal([
+      'deploy',
+      'function',
+      '--function=testFunction',
+      '--service=test',
+      '--stage',
+      'dev',
+    ]);
+    expect(spawnStub.firstCall.lastArg.cwd).to.equal('path');
     expect(context.state).to.deep.equal({ detectedFrameworkVersion: '9.9.9' });
     expect(context.outputs).to.deep.equal({ Key: 'Output' });
   });
