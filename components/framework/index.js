@@ -15,13 +15,16 @@ const MINIMAL_FRAMEWORK_VERSION = '3.7.7';
 const doesSatisfyRequiredFrameworkVersion = (version) =>
   semver.gte(version, MINIMAL_FRAMEWORK_VERSION);
 
+/**
+ * Commands with their appropriate verbs when executed.
+ */
 const commandTextMap = new Map([
     ['deploy:function', ['deploying function', 'deployed']],
     ['deploy:list', ['listing deployments', 'listed']],
     ['rollback:function', ['rolling back', 'rolled back']],
     ['invoke', ['invoking', 'invoked']],
     ['invoke:local', ['invoking', 'invoked']],
-])
+]);
 
 /**
  * Rather than do boilerplate, just create a command with a given name and 
@@ -65,7 +68,11 @@ class ServerlessFramework {
    */
   async command(command, options = {}) {
     let [startText, endText] = commandTextMap.get(command) || [null, null];
-    startText && this.context.startProgress(startText);
+
+    // If it includes functionName, use that as it looks nicer and is clearer..
+    const appendText = options.function ? ` (${options.function}) ` : '';
+
+    startText && this.context.startProgress(`${startText}${appendText}`);
 
     const cliparams = Object.entries(options)
       .filter(([key]) => key !== 'stage')
@@ -85,7 +92,7 @@ class ServerlessFramework {
     const args = [...command.split(':'), ...cliparams];
     const result = await this.exec('serverless', args, true);
 
-    endText && this.context.successProgress(endText);
+    endText && this.context.successProgress(`${endText}${appendText}`);
     return result;
   }
 
