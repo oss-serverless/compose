@@ -9,7 +9,6 @@ const ServerlessError = require('./serverless-error');
 const utils = require('./utils');
 const { loadComponent } = require('./load');
 const colors = require('./cli/colors');
-const ServerlessFramework = require('../components/framework');
 
 const INTERNAL_COMPONENTS = {
   'serverless-framework': resolve(__dirname, '../components/framework'),
@@ -386,27 +385,44 @@ class ComponentsService {
    * or it is in the commands property with a handler.
    */
   getHandlerCommand(command, component, componentName) {
-    const isInternalCommand = ['deploy','deploy:function','remove', 'logs', 'info', 'package'].includes(command);
-    const usableCommands = [component?.[command], component?.commands?.[command]?.handler, component?.commands?.[command]];
-    
+    const isInternalCommand = [
+      'deploy',
+      'deploy:function',
+      'remove',
+      'logs',
+      'info',
+      'package',
+    ].includes(command);
+
+    const hasComponentCommands = component && component.commands;
+
+    // No optional chaining is a real slap in the face here
+    const usableCommands = [
+      component[command],
+      hasComponentCommands && component.commands[command] && component.commands[command].handler,
+      hasComponentCommands && component.commands[command],
+    ];
+
     // If there are no usable functions, it's game over.
-    if (!usableCommands.some(c => typeof c === 'function')) {
+    if (!usableCommands.some((c) => typeof c === 'function')) {
       throw new ServerlessError(
         `No method "${command}" on service "${componentName}"`,
         'COMPONENT_COMMAND_NOT_FOUND'
       );
     }
-    
+
     const [internalCmd, extCmd, extCmdHandler] = usableCommands;
-    const internalBound = internalCmd && internalCmd.bind(component);
-    return isInternalCommand ? internalBound || extCmd || extCmdHandler : extCmd || extCmdHandler || internalBound;
+    const internalBound = internalCmd ? internalCmd.bind(component) : null;
+    return isInternalCommand
+      ? internalBound || extCmd || extCmdHandler
+      : extCmd || extCmdHandler || internalBound;
   }
 
   /**
    * Invokes a command for a given component.
-   * @param {string} componentName The name of the component 
-   * @param {string} command The name of the command (internal or plugin) 
-   * @param {object} options The command line options passed to the function. 
+   * @param {string} componentName The name of the component
+   * @param {string} command The name of the command (internal or plugin)
+   * @param {object} options The command line options passed to the function.
    */
   async invokeComponentCommand(componentName, command, options) {
     // We can have commands that do not have to call commands directly on the component,
@@ -418,13 +434,20 @@ class ComponentsService {
       handler = (opts) => this[command]({ ...opts, componentName });
     } else {
       await this.instantiateComponents();
-      const component = this.allComponents?.[componentName]?.instance;
+
+      // No optional chaining is fun.
+      const component =
+        this.allComponents &&
+        this.allComponents[componentName] &&
+        this.allComponents[componentName].instance;
 
       if (component === undefined) {
         throw new ServerlessError(`Unknown service "${componentName}"`, 'COMPONENT_NOT_FOUND');
       }
-      
-      this.context.logVerbose(`Invoking "${command.replaceAll(':', '')}" on service "${componentName}"`);
+
+      this.context.logVerbose(
+        `Invoking "${command.replaceAll(':', '')}" on service "${componentName}"`
+      );
       handler = this.getHandlerCommand(command, component, componentName);
     }
 

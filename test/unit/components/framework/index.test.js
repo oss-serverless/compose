@@ -97,7 +97,7 @@ describe('test/unit/components/framework/index.test.js', () => {
     expect(context.state).to.deep.equal({ detectedFrameworkVersion: '9.9.9' });
     expect(context.outputs).to.deep.equal({ Key: 'Output' });
   });
-  
+
   it('correctly handles package', async () => {
     const spawnStub = sinon.stub().returns({
       on: (arg, cb) => {

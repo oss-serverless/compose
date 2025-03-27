@@ -29,7 +29,7 @@ const spawnOptions = { cwd: componentsPath, stdio: 'inherit' };
         'node16-linux-x64,node16-mac-x64',
         '--out-path',
         'dist',
-        'bin/bin',
+        'bin/serverless-compose',
       ],
       spawnOptions
     );

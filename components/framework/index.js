@@ -19,23 +19,27 @@ const doesSatisfyRequiredFrameworkVersion = (version) =>
  * Commands with their appropriate verbs when executed.
  */
 const commandTextMap = new Map([
-    ['deploy:function', ['deploying function', 'deployed']],
-    ['deploy:list', ['listing deployments', 'listed']],
-    ['rollback:function', ['rolling back', 'rolled back']],
-    ['invoke', ['invoking', 'invoked']],
-    ['invoke:local', ['invoking', 'invoked']],
+  ['deploy:function', ['deploying function', 'deployed']],
+  ['deploy:list', ['listing deployments', 'listed']],
+  ['rollback:function', ['rolling back', 'rolled back']],
+  ['invoke', ['invoking', 'invoked']],
+  ['invoke:local', ['invoking', 'invoked']],
 ]);
 
 /**
- * Rather than do boilerplate, just create a command with a given name and 
+ * Rather than do boilerplate, just create a command with a given name and
  * forward that directly on to serverless.
  */
-const commandsMemo = (cmdNames, inst) => cmdNames.reduce((iter, cmdName) => ({
-  ...iter,
-  [cmdName]: {
-    handler: (options) => inst.command(cmdName, options)
-  }
-}), {});
+const commandsMemo = (cmdNames, inst) =>
+  cmdNames.reduce(
+    (iter, cmdName) => ({
+      ...iter,
+      [cmdName]: {
+        handler: (options) => inst.command(cmdName, options),
+      },
+    }),
+    {}
+  );
 
 class ServerlessFramework {
   /**
@@ -49,7 +53,7 @@ class ServerlessFramework {
     this.context = context;
 
     this.commands = {
-      ...(commandsMemo(Array.from(commandTextMap.keys()), this))
+      ...commandsMemo(Array.from(commandTextMap.keys()), this),
     };
 
     if (path.relative(process.cwd(), inputs.path) === '') {
@@ -67,12 +71,12 @@ class ServerlessFramework {
    * @returns Promise The result of the execution of the CLI command.
    */
   async command(command, options = {}) {
-    let [startText, endText] = commandTextMap.get(command) || [null, null];
+    const [startText, endText] = commandTextMap.get(command) || [null, null];
 
     // If it includes functionName, use that as it looks nicer and is clearer..
     const appendText = options.function ? ` (${options.function}) ` : '';
 
-    startText && this.context.startProgress(`${startText}${appendText}`);
+    if (startText) this.context.startProgress(`${startText}${appendText}`);
 
     const cliparams = Object.entries(options)
       .filter(([key]) => key !== 'stage')
@@ -92,7 +96,7 @@ class ServerlessFramework {
     const args = [...command.split(':'), ...cliparams];
     const result = await this.exec('serverless', args, true);
 
-    endText && this.context.successProgress(`${endText}${appendText}`);
+    if (endText) this.context.successProgress(`${endText}${appendText}`);
     return result;
   }
 
@@ -246,12 +250,12 @@ class ServerlessFramework {
   }
 
   /**
-   * Executes the serverless CLI command with argumants. 
-   * @param {string} command The command (e.g. deploy) 
-   * @param {array} args The command line arguments 
+   * Executes the serverless CLI command with argumants.
+   * @param {string} command The command (e.g. deploy)
+   * @param {array} args The command line arguments
    * @param {boolean} streamStdout Should the stdout be streamed?
    * @param {function} stdoutCallback Function to call when stdout is received
-   * @returns 
+   * @returns
    */
   async exec(command, args, streamStdout = false, stdoutCallback = undefined) {
     await this.ensureFrameworkVersion();
@@ -283,7 +287,7 @@ class ServerlessFramework {
     return new Promise((resolve, reject) => {
       const child = spawn(command, args, {
         cwd: this.inputs.path,
-        stdio: 'pipe',
+        stdio: streamStdout ? 'pipe' : null,
         env: { ...process.env, SLS_DISABLE_AUTO_UPDATE: '1', SLS_COMPOSE: '1' },
       });
 
@@ -296,7 +300,7 @@ class ServerlessFramework {
       let stdout = '';
       let stderr = '';
       let allOutput = '';
-      
+
       if (child.stdout) {
         child.stdout.on('data', (data) => {
           this.context.logVerbose(data.toString().trim());
@@ -320,7 +324,7 @@ class ServerlessFramework {
         process.removeListener('exit', processExitCallback);
         reject(err);
       });
-      
+
       child.on('close', (code) => {
         process.removeListener('exit', processExitCallback);
         if (code !== 0) {
