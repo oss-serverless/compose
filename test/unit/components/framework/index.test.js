@@ -125,9 +125,9 @@ describe('test/unit/components/framework/index.test.js', () => {
     const component = new FrameworkComponent('some-id', context, { path: 'path' });
     context.state.detectedFrameworkVersion = '9.9.9';
     await component.command('deploy:list', {
-      region: 'eu-west-1',
+      'region': 'eu-west-1',
       'aws-profile': 'zibbidy',
-      stage: 'test',
+      'stage': 'test',
     });
 
     expect(spawnStub).to.be.calledOnce;
@@ -205,9 +205,9 @@ describe('test/unit/components/framework/index.test.js', () => {
     const component = new FrameworkComponent('some-id', context, { path: 'path' });
     context.state.detectedFrameworkVersion = '9.9.9';
     await component.command('invoke', {
-      function: 'testFunction',
-      stage: 'test',
-      region: 'eu-west-1',
+      'function': 'testFunction',
+      'stage': 'test',
+      'region': 'eu-west-1',
       'aws-profile': 'test',
     });
 
@@ -247,9 +247,9 @@ describe('test/unit/components/framework/index.test.js', () => {
     const component = new FrameworkComponent('some-id', context, { path: 'path' });
     context.state.detectedFrameworkVersion = '9.9.9';
     await component.command('invoke:local', {
-      function: 'testFunction',
-      stage: 'test',
-      region: 'eu-west-1',
+      'function': 'testFunction',
+      'stage': 'test',
+      'region': 'eu-west-1',
       'aws-profile': 'test',
     });
 
