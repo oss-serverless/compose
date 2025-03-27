@@ -88,7 +88,6 @@ describe('test/unit/components/framework/index.test.js', () => {
     await component.command('deploy:function', {
       function: 'testFunction',
       stage: 'test',
-      service: 'test',
     });
 
     expect(spawnStub).to.be.calledOnce;
@@ -97,7 +96,171 @@ describe('test/unit/components/framework/index.test.js', () => {
       'deploy',
       'function',
       '--function=testFunction',
-      '--service=test',
+      '--stage',
+      'dev',
+    ]);
+    expect(spawnStub.firstCall.lastArg.cwd).to.equal('path');
+    expect(context.state).to.deep.equal({ detectedFrameworkVersion: '9.9.9' });
+    expect(context.outputs).to.deep.equal({ Key: 'Output' });
+  });
+
+  it('correctly handles deploy list', async () => {
+    const spawnStub = sinon.stub().returns({
+      on: (arg, cb) => {
+        if (arg === 'close') cb(0);
+      },
+      stdout: {
+        on: (arg, cb) => {
+          const data = 'region: us-east-1\n\nStack Outputs:\n  Key: Output';
+          if (arg === 'data') cb(data);
+        },
+      },
+      kill: () => {},
+    });
+    const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
+      'cross-spawn': spawnStub,
+    });
+
+    const context = await getContext();
+    const component = new FrameworkComponent('some-id', context, { path: 'path' });
+    context.state.detectedFrameworkVersion = '9.9.9';
+    await component.command('deploy:list', {
+      region: 'eu-west-1',
+      'aws-profile': 'zibbidy',
+      stage: 'test',
+    });
+
+    expect(spawnStub).to.be.calledOnce;
+    expect(spawnStub.firstCall.firstArg).to.equal('serverless');
+    expect(spawnStub.firstCall.args[1]).to.deep.equal([
+      'deploy',
+      'list',
+      '--region=eu-west-1',
+      '--aws-profile=zibbidy',
+      '--stage',
+      'dev',
+    ]);
+    expect(spawnStub.firstCall.lastArg.cwd).to.equal('path');
+    expect(context.state).to.deep.equal({ detectedFrameworkVersion: '9.9.9' });
+    expect(context.outputs).to.deep.equal({ Key: 'Output' });
+  });
+
+  it('correctly handles rollback function', async () => {
+    const spawnStub = sinon.stub().returns({
+      on: (arg, cb) => {
+        if (arg === 'close') cb(0);
+      },
+      stdout: {
+        on: (arg, cb) => {
+          const data = 'region: us-east-1\n\nStack Outputs:\n  Key: Output';
+          if (arg === 'data') cb(data);
+        },
+      },
+      kill: () => {},
+    });
+    const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
+      'cross-spawn': spawnStub,
+    });
+
+    const context = await getContext();
+    const component = new FrameworkComponent('some-id', context, { path: 'path' });
+    context.state.detectedFrameworkVersion = '9.9.9';
+    await component.command('rollback:function', {
+      function: 'testFunction',
+      stage: 'test',
+    });
+
+    expect(spawnStub).to.be.calledOnce;
+    expect(spawnStub.firstCall.firstArg).to.equal('serverless');
+    expect(spawnStub.firstCall.args[1]).to.deep.equal([
+      'rollback',
+      'function',
+      '--function=testFunction',
+      '--stage',
+      'dev',
+    ]);
+    expect(spawnStub.firstCall.lastArg.cwd).to.equal('path');
+    expect(context.state).to.deep.equal({ detectedFrameworkVersion: '9.9.9' });
+    expect(context.outputs).to.deep.equal({ Key: 'Output' });
+  });
+
+  it('correctly handles invoke', async () => {
+    const spawnStub = sinon.stub().returns({
+      on: (arg, cb) => {
+        if (arg === 'close') cb(0);
+      },
+      stdout: {
+        on: (arg, cb) => {
+          const data = 'region: us-east-1\n\nStack Outputs:\n  Key: Output';
+          if (arg === 'data') cb(data);
+        },
+      },
+      kill: () => {},
+    });
+    const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
+      'cross-spawn': spawnStub,
+    });
+
+    const context = await getContext();
+    const component = new FrameworkComponent('some-id', context, { path: 'path' });
+    context.state.detectedFrameworkVersion = '9.9.9';
+    await component.command('invoke', {
+      function: 'testFunction',
+      stage: 'test',
+      region: 'eu-west-1',
+      'aws-profile': 'test',
+    });
+
+    expect(spawnStub).to.be.calledOnce;
+    expect(spawnStub.firstCall.firstArg).to.equal('serverless');
+    expect(spawnStub.firstCall.args[1]).to.deep.equal([
+      'invoke',
+      '--function=testFunction',
+      '--region=eu-west-1',
+      '--aws-profile=test',
+      '--stage',
+      'dev',
+    ]);
+    expect(spawnStub.firstCall.lastArg.cwd).to.equal('path');
+    expect(context.state).to.deep.equal({ detectedFrameworkVersion: '9.9.9' });
+    expect(context.outputs).to.deep.equal({ Key: 'Output' });
+  });
+
+  it('correctly handles invoke', async () => {
+    const spawnStub = sinon.stub().returns({
+      on: (arg, cb) => {
+        if (arg === 'close') cb(0);
+      },
+      stdout: {
+        on: (arg, cb) => {
+          const data = 'region: us-east-1\n\nStack Outputs:\n  Key: Output';
+          if (arg === 'data') cb(data);
+        },
+      },
+      kill: () => {},
+    });
+    const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
+      'cross-spawn': spawnStub,
+    });
+
+    const context = await getContext();
+    const component = new FrameworkComponent('some-id', context, { path: 'path' });
+    context.state.detectedFrameworkVersion = '9.9.9';
+    await component.command('invoke:local', {
+      function: 'testFunction',
+      stage: 'test',
+      region: 'eu-west-1',
+      'aws-profile': 'test',
+    });
+
+    expect(spawnStub).to.be.calledOnce;
+    expect(spawnStub.firstCall.firstArg).to.equal('serverless');
+    expect(spawnStub.firstCall.args[1]).to.deep.equal([
+      'invoke',
+      'local',
+      '--function=testFunction',
+      '--region=eu-west-1',
+      '--aws-profile=test',
       '--stage',
       'dev',
     ]);
