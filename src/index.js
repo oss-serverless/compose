@@ -59,7 +59,7 @@ const runComponents = async () => {
   } else if (method.includes(':')) {
     let methods;
     [componentName, ...methods] = method.split(':');
-    method = methods.join(':');
+    method = methods.join(':').replace(':', '');
   }
   delete options._; // remove the method name if any
 

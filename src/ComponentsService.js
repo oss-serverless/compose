@@ -9,7 +9,6 @@ const ServerlessError = require('./serverless-error');
 const utils = require('./utils');
 const { loadComponent } = require('./load');
 const colors = require('./cli/colors');
-const ServerlessFramework = require('../components/framework');
 
 const INTERNAL_COMPONENTS = {
   'serverless-framework': resolve(__dirname, '../components/framework'),
@@ -381,6 +380,50 @@ class ComponentsService {
     await this[method](options);
   }
 
+  /**
+   * Gets the relevant handler function required. Either the handler is on the class, it is in the "commands" property
+   * or it is in the commands property with a handler.
+   */
+  getHandlerCommand(command, component, componentName) {
+    const isInternalCommand = [
+      'deploy',
+      'deploy:function',
+      'remove',
+      'logs',
+      'info',
+      'package',
+    ].includes(command);
+
+    const hasComponentCommands = component && component.commands;
+
+    // No optional chaining is a real slap in the face here
+    const usableCommands = [
+      component[command],
+      hasComponentCommands && component.commands[command] && component.commands[command].handler,
+      hasComponentCommands && component.commands[command],
+    ];
+
+    // If there are no usable functions, it's game over.
+    if (!usableCommands.some((c) => typeof c === 'function')) {
+      throw new ServerlessError(
+        `No method "${command}" on service "${componentName}"`,
+        'COMPONENT_COMMAND_NOT_FOUND'
+      );
+    }
+
+    const [internalCmd, extCmd, extCmdHandler] = usableCommands;
+    const internalBound = internalCmd ? internalCmd.bind(component) : null;
+    return isInternalCommand
+      ? internalBound || extCmd || extCmdHandler
+      : extCmd || extCmdHandler || internalBound;
+  }
+
+  /**
+   * Invokes a command for a given component.
+   * @param {string} componentName The name of the component
+   * @param {string} command The name of the command (internal or plugin)
+   * @param {object} options The command line options passed to the function.
+   */
   async invokeComponentCommand(componentName, command, options) {
     // We can have commands that do not have to call commands directly on the component,
     // but are global commands that can accept the componentName parameter
@@ -392,44 +435,20 @@ class ComponentsService {
     } else {
       await this.instantiateComponents();
 
+      // No optional chaining is fun.
       const component =
         this.allComponents &&
         this.allComponents[componentName] &&
         this.allComponents[componentName].instance;
+
       if (component === undefined) {
         throw new ServerlessError(`Unknown service "${componentName}"`, 'COMPONENT_NOT_FOUND');
       }
-      this.context.logVerbose(`Invoking "${command}" on service "${componentName}"`);
 
-      const isDefaultCommand = ['deploy', 'remove', 'logs', 'info', 'package'].includes(command);
-
-      if (isDefaultCommand) {
-        // Default command defined for all components (deploy, logs, dev, etc.)
-        if (!component || !component[command]) {
-          throw new ServerlessError(
-            `No method "${command}" on service "${componentName}"`,
-            'COMPONENT_COMMAND_NOT_FOUND'
-          );
-        }
-        handler = (opts) => component[command](opts);
-      } else if (
-        (!component || !component.commands || !component.commands[command]) &&
-        component instanceof ServerlessFramework
-      ) {
-        // Workaround to invoke all custom Framework commands
-        // TODO: Support options and validation
-        handler = (opts) => component.command(command, opts);
-      } else {
-        // Custom command: the handler is defined in the component's `commands` property
-        if (!component || !component.commands || !component.commands[command]) {
-          throw new ServerlessError(
-            `No command "${command}" on service ${componentName}`,
-            'COMPONENT_COMMAND_NOT_FOUND'
-          );
-        }
-        const commandHandler = component.commands[command].handler;
-        handler = (opts) => commandHandler.call(component, opts);
-      }
+      this.context.logVerbose(
+        `Invoking "${command.replaceAll(':', '')}" on service "${componentName}"`
+      );
+      handler = this.getHandlerCommand(command, component, componentName);
     }
 
     try {
