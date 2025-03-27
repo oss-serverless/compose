@@ -398,10 +398,16 @@ class ComponentsService {
     }
     
     const [internalCmd, extCmd, extCmdHandler] = usableCommands;
-    return isInternalCommand ? internalCmd || extCmd || extCmdHandler : extCmd || extCmdHandler || internalCmd;
+    const internalBound = internalCmd && internalCmd.bind(component);
+    return isInternalCommand ? internalBound || extCmd || extCmdHandler : extCmd || extCmdHandler || internalBound;
   }
 
-
+  /**
+   * Invokes a command for a given component.
+   * @param {string} componentName The name of the component 
+   * @param {string} command The name of the command (internal or plugin) 
+   * @param {object} options The command line options passed to the function. 
+   */
   async invokeComponentCommand(componentName, command, options) {
     // We can have commands that do not have to call commands directly on the component,
     // but are global commands that can accept the componentName parameter

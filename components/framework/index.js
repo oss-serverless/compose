@@ -64,7 +64,7 @@ class ServerlessFramework {
    * @returns Promise The result of the execution of the CLI command.
    */
   async command(command, options = {}) {
-    let [startText, endText] = commandTextMap.get(command) ?? [null, null];
+    let [startText, endText] = commandTextMap.get(command) || [null, null];
     startText && this.context.startProgress(startText);
 
     const cliparams = Object.entries(options)
@@ -85,7 +85,7 @@ class ServerlessFramework {
     const args = [...command.split(':'), ...cliparams];
     const result = await this.exec('serverless', args, true);
 
-    endText && this.context.startProgress(endText);
+    endText && this.context.successProgress(endText);
     return result;
   }
 
@@ -110,7 +110,7 @@ class ServerlessFramework {
 
     const hasOutputs = this.context.outputs && Object.keys(this.context.outputs).length > 0;
     const hasChanges = !deployOutput.includes('No changes to deploy. Deployment skipped.');
-    
+
     // Skip retrieving outputs via `sls info` if we already have outputs (faster)
     if (hasChanges || !hasOutputs) {
       await this.context.updateOutputs(await this.retrieveOutputs());
@@ -239,7 +239,12 @@ class ServerlessFramework {
   }
 
   /**
-   * @return {Promise<{ stdout: string, stderr: string }>}
+   * Executes the serverless CLI command with argumants. 
+   * @param {string} command The command (e.g. deploy) 
+   * @param {array} args The command line arguments 
+   * @param {boolean} streamStdout Should the stdout be streamed?
+   * @param {function} stdoutCallback Function to call when stdout is received
+   * @returns 
    */
   async exec(command, args, streamStdout = false, stdoutCallback = undefined) {
     await this.ensureFrameworkVersion();
@@ -271,7 +276,7 @@ class ServerlessFramework {
     return new Promise((resolve, reject) => {
       const child = spawn(command, args, {
         cwd: this.inputs.path,
-        stdio: streamStdout ? 'inherit' : undefined,
+        stdio: 'pipe',
         env: { ...process.env, SLS_DISABLE_AUTO_UPDATE: '1', SLS_COMPOSE: '1' },
       });
 
@@ -284,6 +289,7 @@ class ServerlessFramework {
       let stdout = '';
       let stderr = '';
       let allOutput = '';
+      
       if (child.stdout) {
         child.stdout.on('data', (data) => {
           this.context.logVerbose(data.toString().trim());
@@ -294,6 +300,7 @@ class ServerlessFramework {
           }
         });
       }
+
       if (child.stderr) {
         child.stderr.on('data', (data) => {
           this.context.logVerbose(data.toString().trim());
@@ -301,10 +308,12 @@ class ServerlessFramework {
           allOutput += data;
         });
       }
+
       child.on('error', (err) => {
         process.removeListener('exit', processExitCallback);
         reject(err);
       });
+      
       child.on('close', (code) => {
         process.removeListener('exit', processExitCallback);
         if (code !== 0) {
