@@ -1,7 +1,6 @@
 'use strict';
 
 const path = require('path');
-const prettyoutput = require('prettyoutput');
 const isPlainObject = require('type/plain-object/is');
 const utils = require('./utils');
 const packageJson = require('../package.json');
@@ -12,6 +11,7 @@ const readline = require('readline');
 const Progresses = require('./cli/Progresses');
 const colors = require('./cli/colors');
 const ServerlessError = require('./serverless-error');
+const formatOutput = require('./utils/format-output');
 
 class Context {
   constructor(config) {
@@ -72,21 +72,14 @@ class Context {
   }
 
   renderOutputs(outputs) {
-    if (typeof outputs !== 'object' || Object.keys(outputs).length === 0) {
+    if (!outputs || typeof outputs !== 'object' || Object.keys(outputs).length === 0) {
       return;
     }
 
     this.output.writeText(
-      `\n${prettyoutput(outputs, {
-        alignKeyValues: false,
-        colors: {
-          keys: 'gray',
-          dash: 'gray',
-          number: 'white',
-          true: 'white',
-          false: 'white',
-        },
-      })}`.trimEnd()
+      `\n${formatOutput(outputs)}`
+        // Output.writeText already appends a trailing newline per line.
+        .trimEnd()
     );
   }
 
