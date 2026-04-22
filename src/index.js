@@ -1,9 +1,6 @@
 'use strict';
 
-// Setup log writing
-require('./utils/serverless-utils/log-reporters/node');
-
-const args = require('minimist')(process.argv.slice(2));
+const minimist = require('minimist');
 const renderHelp = require('./render-help');
 const Context = require('./Context');
 const ComponentsService = require('./ComponentsService');
@@ -14,6 +11,7 @@ const resolveConfigurationPath = require('./configuration/resolve-path');
 const readConfiguration = require('./configuration/read');
 const { validateConfiguration } = require('./configuration/validate');
 const validateOptions = require('./validate-options');
+const initializeNodeLogging = require('./utils/serverless-utils/log-reporters/node');
 
 let options;
 let method;
@@ -39,7 +37,10 @@ require('signal-exit/signals').forEach((signal) => {
   });
 });
 
-const runComponents = async () => {
+const runComponents = async (argv = process.argv.slice(2)) => {
+  const args = minimist(argv);
+  initializeNodeLogging({ argv, env: process.env, stdin: process.stdin, stdout: process.stdout });
+
   if (args.help || args._[0] === 'help') {
     await renderHelp();
     return;
@@ -63,7 +64,7 @@ const runComponents = async () => {
   }
   delete options._; // remove the method name if any
 
-  const configurationPath = await resolveConfigurationPath();
+  const configurationPath = await resolveConfigurationPath(process.cwd());
   const configuration = await readConfiguration(configurationPath);
   validateConfiguration(configuration, configurationPath);
 

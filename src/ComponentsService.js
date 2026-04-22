@@ -79,7 +79,7 @@ const validateGraph = (graph) => {
   }
 };
 
-const getAllComponents = async (obj = {}) => {
+const getAllComponents = async (obj = {}, root = process.cwd()) => {
   const allComponents = {};
 
   for (const [key, val] of Object.entries(obj.services)) {
@@ -90,7 +90,7 @@ const getAllComponents = async (obj = {}) => {
 
     // Local component (starts with '.')
     if (val.component[0] === '.') {
-      const localComponentPath = resolve(process.cwd(), val.component);
+      const localComponentPath = resolve(root, val.component);
       if (!(await utils.fileExists(localComponentPath))) {
         throw new ServerlessError(
           `The component "${val.component}" (used by service "${key}") is invalid: file not found`,
@@ -237,7 +237,7 @@ class ComponentsService {
   }
 
   async init() {
-    const allComponents = await getAllComponents(this.configuration);
+    const allComponents = await getAllComponents(this.configuration, this.context.root);
     await validateComponents(allComponents);
     this.allComponents = setDependencies(allComponents);
 

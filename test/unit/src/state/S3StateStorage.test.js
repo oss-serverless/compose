@@ -7,9 +7,6 @@ const stream = require('stream');
 
 const S3StateStorage = require('../../../../src/state/S3StateStorage');
 
-chai.use(require('sinon-chai'));
-chai.use(require('chai-as-promised'));
-
 const expect = chai.expect;
 
 describe('test/unit/src/state/S3StateStorage.test.js', () => {

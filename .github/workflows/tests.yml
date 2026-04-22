@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 30
 
@@ -26,23 +26,22 @@ jobs:
           git checkout main
           git checkout pr
 
-      - name: Retrieve dependencies from cache
-        id: cacheNpm
-        uses: actions/cache@v4
+      - name: Restore npm cache
+        uses: actions/cache@v5
         with:
           path: ~/.npm
-          key: npm-v22-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('package.json') }}
+          key: npm-no-lock-v1-${{ runner.os }}-node22-${{ hashFiles('package.json') }}
           restore-keys: |
-            npm-v22-${{ runner.os }}-${{ github.ref }}-
-            npm-v22-${{ runner.os }}-refs/heads/main-
+            npm-no-lock-v1-${{ runner.os }}-node22-
 
       - name: Install Node.js and npm
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22.x
+          package-manager-cache: false
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --package-lock=false
 
       - name: Validate formatting
         run: npm run prettier-check:updated
@@ -64,25 +63,24 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Retrieve dependencies from cache
-        id: cacheNpm
-        uses: actions/cache@v4
+      - name: Restore npm cache
+        uses: actions/cache@v5
         with:
           path: ~/.npm
-          key: npm-v20-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('package.json') }}
+          key: npm-no-lock-v1-${{ runner.os }}-node22-${{ hashFiles('package.json') }}
           restore-keys: |
-            npm-v20-${{ runner.os }}-${{ github.ref }}-
-            npm-v20-${{ runner.os }}-refs/heads/main-
+            npm-no-lock-v1-${{ runner.os }}-node22-
 
       - name: Install Node.js and npm
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22.x
+          package-manager-cache: false
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --package-lock=false
 
       - name: Unit tests
         run: npm test
@@ -92,25 +90,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Retrieve dependencies from cache
-        id: cacheNpm
-        uses: actions/cache@v4
+      - name: Restore npm cache
+        uses: actions/cache@v5
         with:
           path: ~/.npm
-          key: npm-v20-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('package.json') }}
+          key: npm-no-lock-v1-${{ runner.os }}-node20-${{ hashFiles('package.json') }}
           restore-keys: |
-            npm-v20-${{ runner.os }}-${{ github.ref }}-
-            npm-v20-${{ runner.os }}-refs/heads/main-
+            npm-no-lock-v1-${{ runner.os }}-node20-
 
       - name: Install Node.js and npm
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20.x
+          package-manager-cache: false
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --package-lock=false
 
       - name: Unit tests
         run: npm test

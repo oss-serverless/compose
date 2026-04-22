@@ -9,8 +9,6 @@ const Context = require('../../../src/Context');
 const stripAnsi = require('strip-ansi');
 const readStream = require('../read-stream');
 
-chai.use(require('chai-as-promised'));
-
 const expect = chai.expect;
 
 const frameworkComponentPath = path.dirname(

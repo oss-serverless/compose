@@ -14,23 +14,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Retrieve dependencies from cache
-        uses: actions/cache@v4
-        id: cacheNpm
+      - name: Restore npm cache
+        uses: actions/cache@v5
         with:
           path: ~/.npm
-          key: npm-v22-${{ runner.os }}-refs/heads/main-${{ hashFiles('package.json') }}
+          key: npm-no-lock-v1-${{ runner.os }}-node22-${{ hashFiles('package.json') }}
+          restore-keys: |
+            npm-no-lock-v1-${{ runner.os }}-node22-
 
       - name: Install Node.js and npm
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22.x
+          package-manager-cache: false
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --package-lock=false
 
       # Store the name of the release
       # See https://stackoverflow.com/questions/58177786/get-the-current-pushed-tag-in-github-actions
@@ -70,9 +72,10 @@ jobs:
           name: npm-package
 
       - name: Install Node.js and npm
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22.x
+          package-manager-cache: false
           registry-url: https://registry.npmjs.org
 
       - name: Publish new version

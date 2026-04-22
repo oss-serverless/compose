@@ -16,7 +16,7 @@ const ServerlessError = require('./serverless-error');
 class Context {
   constructor(config) {
     this.version = packageJson.version;
-    this.root = path.resolve(config.root) || process.cwd();
+    this.root = path.resolve(config.root || process.cwd());
     this.output = new Output(config.verbose || false, config.disableIO);
     /** @type {string} */
     this.stage = config.stage;
@@ -42,7 +42,7 @@ class Context {
 
   async setupStateStorage() {
     if (!this.configuration.state) {
-      this.stateStorage = new LocalStateStorage(this.stage);
+      this.stateStorage = new LocalStateStorage(this.root, this.stage);
       return;
     }
 

@@ -4,8 +4,6 @@ const chai = require('chai');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 
-chai.use(require('sinon-chai'));
-
 const expect = chai.expect;
 
 describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
