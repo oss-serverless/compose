@@ -4,45 +4,20 @@ const chai = require('chai');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 
-chai.use(require('sinon-chai'));
-
 const expect = chai.expect;
 
 describe('test/unit/src/utils/serverless-utils/log-reporters/node.test.js', () => {
-  let originalArgv;
-  let originalInteractiveSetup;
-  let originalCi;
-  let originalLogLevel;
-  let originalLogDebug;
-
-  beforeEach(() => {
-    originalArgv = process.argv.slice();
-    originalInteractiveSetup = process.env.SLS_INTERACTIVE_SETUP_ENABLE;
-    originalCi = process.env.CI;
-    originalLogLevel = process.env.SLS_LOG_LEVEL;
-    originalLogDebug = process.env.SLS_LOG_DEBUG;
-  });
-
-  afterEach(() => {
-    process.argv = originalArgv;
-    if (originalInteractiveSetup == null) delete process.env.SLS_INTERACTIVE_SETUP_ENABLE;
-    else process.env.SLS_INTERACTIVE_SETUP_ENABLE = originalInteractiveSetup;
-    if (originalCi == null) delete process.env.CI;
-    else process.env.CI = originalCi;
-    if (originalLogLevel == null) delete process.env.SLS_LOG_LEVEL;
-    else process.env.SLS_LOG_LEVEL = originalLogLevel;
-    if (originalLogDebug == null) delete process.env.SLS_LOG_DEBUG;
-    else process.env.SLS_LOG_DEBUG = originalLogDebug;
-    sinon.restore();
-  });
-
   const loadModule = (uniGlobalState = {}, overrides = {}) => {
     const logReporter = overrides.logReporter || sinon.stub();
     const progressReporter = overrides.progressReporter || sinon.stub();
     const outputEmitter = overrides.outputEmitter || { on: sinon.stub() };
     const joinTextTokens = overrides.joinTextTokens || sinon.stub().returns('joined');
+    const env = overrides.env || {};
+    const argv = overrides.argv || [];
+    const stdin = overrides.stdin || { isTTY: false };
+    const stdout = overrides.stdout || { isTTY: false, write: sinon.stub() };
 
-    proxyquire
+    const initializeNodeLogging = proxyquire
       .noCallThru()
       .load('../../../../../../src/utils/serverless-utils/log-reporters/node', {
         'uni-global': () => uniGlobalState,
@@ -54,33 +29,41 @@ describe('test/unit/src/utils/serverless-utils/log-reporters/node.test.js', () =
         '../lib/log-reporters/node/progress-reporter': progressReporter,
       });
 
-    return { logReporter, progressReporter, outputEmitter, joinTextTokens };
+    const result = initializeNodeLogging({ argv, env, stdin, stdout });
+
+    return { logReporter, progressReporter, outputEmitter, joinTextTokens, env, stdout, result };
   };
 
   it('sets SLS_LOG_LEVEL=info when verbose mode is enabled', () => {
-    const uniGlobalState = {};
-    delete process.env.SLS_LOG_LEVEL;
-    process.argv = ['node', 'compose', '--verbose'];
+    const { env, logReporter, outputEmitter } = loadModule({}, { argv: ['deploy', '--verbose'] });
 
-    const { logReporter, outputEmitter } = loadModule(uniGlobalState);
-
-    expect(process.env.SLS_LOG_LEVEL).to.equal('info');
+    expect(env.SLS_LOG_LEVEL).to.equal('info');
     expect(logReporter).to.have.been.calledOnceWithExactly({
       logLevelIndex: 1,
       debugNamespaces: undefined,
     });
+    expect(outputEmitter.on).to.have.been.calledOnce;
+  });
+
+  it('stores the derived log level in shared state', () => {
+    const uniGlobalState = {};
+
+    const { outputEmitter } = loadModule(uniGlobalState, { argv: ['deploy', '--verbose'] });
+
     expect(uniGlobalState.logLevelIndex).to.equal(1);
     expect(outputEmitter.on).to.have.been.calledOnce;
   });
 
   it('does not override debug logging with verbose mode', () => {
-    const uniGlobalState = {};
-    process.env.SLS_LOG_LEVEL = 'debug';
-    process.argv = ['node', 'compose', '--verbose'];
+    const { env, logReporter } = loadModule(
+      {},
+      {
+        argv: ['deploy', '--verbose'],
+        env: { SLS_LOG_LEVEL: 'debug' },
+      }
+    );
 
-    const { logReporter } = loadModule(uniGlobalState);
-
-    expect(process.env.SLS_LOG_LEVEL).to.equal('debug');
+    expect(env.SLS_LOG_LEVEL).to.equal('debug');
     expect(logReporter).to.have.been.calledOnceWithExactly({
       logLevelIndex: 0,
       debugNamespaces: undefined,
@@ -89,23 +72,21 @@ describe('test/unit/src/utils/serverless-utils/log-reporters/node.test.js', () =
 
   it('is idempotent when reporter setup already happened', () => {
     const uniGlobalState = { logLevelIndex: 1 };
-    process.argv = ['node', 'compose', '--verbose'];
 
-    const { logReporter, progressReporter, outputEmitter } = loadModule(uniGlobalState);
+    const { logReporter, progressReporter, outputEmitter, result } = loadModule(uniGlobalState, {
+      argv: ['deploy', '--verbose'],
+    });
 
     expect(logReporter.called).to.equal(false);
     expect(progressReporter.called).to.equal(false);
     expect(outputEmitter.on.called).to.equal(false);
+    expect(result).to.deep.equal({ logLevelIndex: 1, isInteractive: undefined });
   });
 
   it('maps debug namespaces from argv into SLS_LOG_DEBUG', () => {
-    const uniGlobalState = {};
-    delete process.env.SLS_LOG_DEBUG;
-    process.argv = ['node', 'compose', '--debug=aws'];
+    const { env, logReporter } = loadModule({}, { argv: ['deploy', '--debug=aws'] });
 
-    const { logReporter } = loadModule(uniGlobalState);
-
-    expect(process.env.SLS_LOG_DEBUG).to.equal('aws');
+    expect(env.SLS_LOG_DEBUG).to.equal('aws');
     expect(logReporter).to.have.been.calledOnceWithExactly({
       logLevelIndex: 2,
       debugNamespaces: 'aws',
@@ -114,9 +95,10 @@ describe('test/unit/src/utils/serverless-utils/log-reporters/node.test.js', () =
 
   it('registers the progress reporter when interactive setup is enabled', () => {
     const uniGlobalState = {};
-    process.env.SLS_INTERACTIVE_SETUP_ENABLE = '1';
 
-    const { progressReporter } = loadModule(uniGlobalState);
+    const { progressReporter } = loadModule(uniGlobalState, {
+      env: { SLS_INTERACTIVE_SETUP_ENABLE: '1' },
+    });
 
     expect(progressReporter).to.have.been.calledOnceWithExactly({ logLevelIndex: 2 });
     expect(uniGlobalState.logIsInteractive).to.equal('1');
@@ -130,12 +112,12 @@ describe('test/unit/src/utils/serverless-utils/log-reporters/node.test.js', () =
       }),
     };
     const joinTextTokens = sinon.stub().returns('joined\n');
-    const stdoutWrite = sinon.stub(process.stdout, 'write');
+    const stdout = { isTTY: false, write: sinon.stub() };
 
-    loadModule({}, { outputEmitter, joinTextTokens });
+    loadModule({}, { outputEmitter, joinTextTokens, stdout });
     handlers.get('write')({ mode: 'text', textTokens: ['first', 'second'] });
 
     expect(joinTextTokens).to.have.been.calledOnceWithExactly(['first', 'second']);
-    expect(stdoutWrite).to.have.been.calledOnceWithExactly('joined\n');
+    expect(stdout.write).to.have.been.calledOnceWithExactly('joined\n');
   });
 });

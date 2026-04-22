@@ -14,9 +14,6 @@ const {
 const getStateBucketName = require('../../../../../src/state/utils/get-state-bucket-name');
 const Context = require('../../../../../src/Context');
 
-chai.use(require('chai-as-promised'));
-chai.use(require('sinon-chai'));
-
 const expect = chai.expect;
 
 describe('test/unit/src/state/utils/get-state-bucket-name.test.js', () => {

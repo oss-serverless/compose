@@ -8,9 +8,6 @@ const sinon = require('sinon');
 
 const getStateBucketRegion = require('../../../../../src/state/utils/get-state-bucket-region');
 
-chai.use(require('chai-as-promised'));
-chai.use(require('sinon-chai'));
-
 const expect = chai.expect;
 
 describe('test/unit/src/state/utils/get-state-bucket-region.test.js', () => {

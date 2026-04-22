@@ -7,15 +7,16 @@ const Context = require('../../../src/Context');
 const readStream = require('../read-stream');
 
 describe('test/unit/src/Context.test.js', () => {
-  const contextConfig = {
-    root: process.cwd(),
-    stage: 'dev',
-    disableIO: true,
-    configuration: {},
-  };
+  const createContext = () =>
+    new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
 
   it('does not render empty or invalid outputs', async () => {
-    const context = new Context(contextConfig);
+    const context = createContext();
 
     context.renderOutputs(null);
     context.renderOutputs({});
@@ -24,7 +25,7 @@ describe('test/unit/src/Context.test.js', () => {
   });
 
   it('renders outputs through the configured output writer', async () => {
-    const context = new Context(contextConfig);
+    const context = createContext();
 
     context.renderOutputs({ value: 1 });
 

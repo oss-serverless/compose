@@ -6,9 +6,9 @@ const path = require('path');
 const fsp = require('fs').promises;
 
 class LocalStateStorage extends BaseStateStorage {
-  constructor(stage) {
+  constructor(root, stage) {
     super();
-    this.stateRoot = path.join(process.cwd(), '.serverless');
+    this.stateRoot = path.join(root, '.serverless');
     this.stage = stage;
   }
 

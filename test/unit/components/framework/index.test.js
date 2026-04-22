@@ -9,10 +9,7 @@ const { validateComponentInputs } = require('../../../../src/configuration/valid
 const { configSchema } = require('../../../../components/framework/configuration');
 const ServerlessFramework = require('../../../../components/framework');
 
-// Configure chai
-chai.use(require('chai-as-promised'));
-chai.use(require('sinon-chai'));
-const expect = require('chai').expect;
+const expect = chai.expect;
 
 /**
  * @returns {Promise<ComponentContext>}
