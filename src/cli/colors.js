@@ -10,4 +10,5 @@ module.exports = {
   gray: colorSupportLevel > 2 ? chalk.rgb(140, 141, 145) : chalk.gray,
   red: colorSupportLevel > 2 ? chalk.rgb(253, 87, 80) : chalk.redBright,
   warning: chalk.rgb(255, 165, 0),
+  white: chalk.white,
 };

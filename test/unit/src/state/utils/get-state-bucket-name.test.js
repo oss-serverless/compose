@@ -2,6 +2,8 @@
 
 const chai = require('chai');
 const { mockClient } = require('aws-sdk-client-mock');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 const {
   CloudFormationClient,
   DescribeStackResourceCommand,
@@ -12,6 +14,7 @@ const {
 const getStateBucketName = require('../../../../../src/state/utils/get-state-bucket-name');
 const Context = require('../../../../../src/Context');
 
+chai.use(require('chai-as-promised'));
 chai.use(require('sinon-chai'));
 
 const expect = chai.expect;
@@ -39,6 +42,15 @@ describe('test/unit/src/state/utils/get-state-bucket-name.test.js', () => {
       existingBucket: 'existing',
     };
     expect(await getStateBucketName(configuration, context)).to.equal('existing');
+  });
+
+  it('supports externalBucket as a compatibility alias', async () => {
+    const configuration = {
+      backend: 's3',
+      externalBucket: 'external',
+    };
+
+    expect(await getStateBucketName(configuration, context)).to.equal('external');
   });
 
   it('resolves already existing bucket name provisioned by compose', async () => {
@@ -92,5 +104,37 @@ describe('test/unit/src/state/utils/get-state-bucket-name.test.js', () => {
     await expect(
       getStateBucketName(configuration, context)
     ).to.be.eventually.rejected.and.have.property('code', 'CANNOT_DEPLOY_S3_REMOTE_STATE_STACK');
+  });
+
+  it('uses profile-aware AWS config for CloudFormation access', async () => {
+    const describeStackResource = sinon.stub().resolves({
+      StackResourceDetail: { PhysicalResourceId: 'fromcf' },
+    });
+    const CloudFormation = sinon.stub().callsFake(() => ({
+      describeStackResource,
+    }));
+    const getAwsClientConfig = sinon.stub().returns({
+      region: 'us-east-1',
+      credentials: 'creds',
+    });
+
+    const getStateBucketNameWithStubs = proxyquire
+      .noCallThru()
+      .load('../../../../../src/state/utils/get-state-bucket-name', {
+        '@aws-sdk/client-cloudformation': { CloudFormation },
+        '../../utils/aws': { getAwsClientConfig },
+      });
+
+    expect(await getStateBucketNameWithStubs({ backend: 's3', profile: 'team' }, context)).to.equal(
+      'fromcf'
+    );
+    expect(getAwsClientConfig).to.have.been.calledOnceWithExactly({
+      profile: 'team',
+      region: 'us-east-1',
+    });
+    expect(CloudFormation).to.have.been.calledOnceWithExactly({
+      region: 'us-east-1',
+      credentials: 'creds',
+    });
   });
 });

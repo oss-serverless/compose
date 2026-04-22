@@ -8,32 +8,73 @@ env:
   FORCE_COLOR: 1
 
 jobs:
-  linuxNode16:
-    name: '[Linux] [Node 16] Tests'
-    runs-on: ubuntu-latest
+  windowsNode22:
+    name: '[Windows] Node 22: Unit tests'
+    runs-on: windows-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Retrieve dependencies from cache
         id: cacheNpm
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
-          path: |
-            ~/.npm
-            node_modules
-          key: npm-v16-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('package.json') }}
-          restore-keys: npm-v16-${{ runner.os }}-${{ github.ref }}-
+          path: ~/.npm
+          key: npm-v22-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            npm-v22-${{ runner.os }}-${{ github.ref }}-
+            npm-v22-${{ runner.os }}-refs/heads/main-
 
       - name: Install Node.js and npm
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
-          node-version: 16.x
+          node-version: 22.x
 
       - name: Install dependencies
-        if: steps.cacheNpm.outputs.cache-hit != 'true'
-        run: |
-          npm update --no-save
-          npm update --save-dev --no-save
+        run: npm install
+
       - name: Unit tests
         run: npm test
+
+  linuxNode20:
+    name: '[Linux] Node 20: Unit tests'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Retrieve dependencies from cache
+        id: cacheNpm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-v20-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            npm-v20-${{ runner.os }}-${{ github.ref }}-
+            npm-v20-${{ runner.os }}-refs/heads/main-
+
+      - name: Install Node.js and npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Verify package contents
+        run: npm pack --dry-run
+
+      - name: Install packed tarball smoke test
+        run: |
+          PACKAGE_TGZ="$(npm pack --silent)"
+          TMPDIR="$(mktemp -d)"
+          npm init -y --prefix "$TMPDIR" >/dev/null
+          npm install --prefix "$TMPDIR" "./$PACKAGE_TGZ" >/dev/null
+          node "$TMPDIR/node_modules/@osls/compose/bin/serverless-compose" --help >/dev/null
+          rm -rf "$TMPDIR" "$PACKAGE_TGZ"

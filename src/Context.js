@@ -1,7 +1,6 @@
 'use strict';
 
 const path = require('path');
-const prettyoutput = require('prettyoutput');
 const isPlainObject = require('type/plain-object/is');
 const utils = require('./utils');
 const packageJson = require('../package.json');
@@ -9,6 +8,7 @@ const LocalStateStorage = require('./state/LocalStateStorage');
 const getS3StateStorageFromConfig = require('./state/get-s3-state-storage-from-config');
 const Output = require('./cli/Output');
 const readline = require('readline');
+const formatOutput = require('./cli/format-output');
 const Progresses = require('./cli/Progresses');
 const colors = require('./cli/colors');
 const ServerlessError = require('./serverless-error');
@@ -72,22 +72,11 @@ class Context {
   }
 
   renderOutputs(outputs) {
-    if (typeof outputs !== 'object' || Object.keys(outputs).length === 0) {
+    if (!outputs || typeof outputs !== 'object' || Object.keys(outputs).length === 0) {
       return;
     }
 
-    this.output.writeText(
-      `\n${prettyoutput(outputs, {
-        alignKeyValues: false,
-        colors: {
-          keys: 'gray',
-          dash: 'gray',
-          number: 'white',
-          true: 'white',
-          false: 'white',
-        },
-      })}`.trimEnd()
-    );
+    this.output.writeText(formatOutput(outputs).trimEnd());
   }
 
   logVerbose(message) {

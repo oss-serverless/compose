@@ -261,13 +261,21 @@ class Progresses {
   }
 
   bindSigint() {
-    process.on('SIGINT', () => {
+    Progresses.lastBoundInstance = this;
+    if (Progresses.sigintHandler) {
+      return;
+    }
+
+    Progresses.sigintHandler = () => {
+      const boundInstance = Progresses.lastBoundInstance;
       cliCursor.show();
-      if (this.output.interactiveStderr) {
-        this.output.interactiveStderr.moveCursor(0, this.lineCount);
+      if (boundInstance && boundInstance.output.interactiveStderr) {
+        boundInstance.output.interactiveStderr.moveCursor(0, boundInstance.lineCount);
       }
       process.exit(0);
-    });
+    };
+
+    process.on('SIGINT', Progresses.sigintHandler);
   }
 
   ellipsis(text) {

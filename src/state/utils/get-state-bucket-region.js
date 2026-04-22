@@ -1,11 +1,16 @@
 'use strict';
 
 const { S3 } = require('@aws-sdk/client-s3');
+const { getAwsClientConfig } = require('../../utils/aws');
 const ServerlessError = require('../../serverless-error');
 
-const getStateBucketRegion = async (bucketName) => {
-  // TODO: INJECT RESOLVED AWS CREDENTIALS
-  const client = new S3();
+const getStateBucketRegion = async (bucketName, stateConfiguration = {}) => {
+  const client = new S3(
+    getAwsClientConfig({
+      profile: stateConfiguration.profile,
+      region: 'us-east-1',
+    })
+  );
 
   let result;
   try {
@@ -31,8 +36,13 @@ const getStateBucketRegion = async (bucketName) => {
     );
   }
 
-  // Buckets in `us-east-1` have `LocationConstraint` empty
-  return result.LocationConstraint || 'us-east-1';
+  if (!result.LocationConstraint) {
+    return 'us-east-1';
+  }
+  if (result.LocationConstraint === 'EU') {
+    return 'eu-west-1';
+  }
+  return result.LocationConstraint;
 };
 
 module.exports = getStateBucketRegion;

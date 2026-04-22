@@ -1,12 +1,25 @@
 #!/usr/bin/env node
 
-// Used to measure length of the whole command
-EvalError.$composeCommandStartTime = process.hrtime();
+'use strict';
 
-const { runComponents } = require('../src')
+// `EvalError` is used to not pollute global namespace but still have the value accessible globally
+const isMainModule = !EvalError.$composeCommandStartTime;
+if (isMainModule) EvalError.$composeCommandStartTime = process.hrtime();
 
+const isSupportedNodeVersion = require('../src/cli/is-supported-node-version');
+const minimumSupportedVersionMajor = 20;
+const minimumSupportedVersionMinor = 0;
 
-// Run
-;(async () => {
-  return runComponents()
-})();
+if (!isSupportedNodeVersion(process.version)) {
+  const composeVersion = require('../package.json').version;
+  process.stderr.write(
+    `\x1b[91mError: Serverless Framework Compose v${composeVersion} does not support ` +
+      `Node.js ${process.version}. Please upgrade Node.js to the latest ` +
+      `LTS version (v${minimumSupportedVersionMajor}.${minimumSupportedVersionMinor}.0 is a minimum supported version)\x1b[39m\n`
+  );
+  process.exit(1);
+}
+
+const { runComponents } = require('../src');
+
+(async () => runComponents())();

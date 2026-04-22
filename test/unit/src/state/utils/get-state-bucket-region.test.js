@@ -3,9 +3,12 @@
 const chai = require('chai');
 const { mockClient } = require('aws-sdk-client-mock');
 const { S3Client, GetBucketLocationCommand } = require('@aws-sdk/client-s3');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 
 const getStateBucketRegion = require('../../../../../src/state/utils/get-state-bucket-region');
 
+chai.use(require('chai-as-promised'));
 chai.use(require('sinon-chai'));
 
 const expect = chai.expect;
@@ -30,6 +33,11 @@ describe('test/unit/src/state/utils/get-state-bucket-region.test.js', () => {
   it('correctly resolves region for non `us-east-1` bucket', async () => {
     s3Mock.on(GetBucketLocationCommand).resolves({ LocationConstraint: 'eu-central-1' });
     expect(await getStateBucketRegion(bucketName)).to.equal('eu-central-1');
+  });
+
+  it('normalizes the legacy `EU` region alias', async () => {
+    s3Mock.on(GetBucketLocationCommand).resolves({ LocationConstraint: 'EU' });
+    expect(await getStateBucketRegion(bucketName)).to.equal('eu-west-1');
   });
 
   it('rejects when bucket cannot be found', async () => {
@@ -60,5 +68,30 @@ describe('test/unit/src/state/utils/get-state-bucket-region.test.js', () => {
       'code',
       'GENERIC_CANNOT_ACCESS_PROVIDED_REMOTE_STATE_BUCKET'
     );
+  });
+
+  it('uses profile-aware AWS client config for bucket lookups', async () => {
+    const getBucketLocation = sinon.stub().resolves({ LocationConstraint: 'eu-central-1' });
+    const S3 = sinon.stub().callsFake(() => ({ getBucketLocation }));
+    const getAwsClientConfig = sinon.stub().returns({
+      region: 'us-east-1',
+      credentials: 'creds',
+    });
+
+    const getStateBucketRegionWithStubs = proxyquire
+      .noCallThru()
+      .load('../../../../../src/state/utils/get-state-bucket-region', {
+        '@aws-sdk/client-s3': { S3 },
+        '../../utils/aws': { getAwsClientConfig },
+      });
+
+    expect(await getStateBucketRegionWithStubs(bucketName, { profile: 'team' })).to.equal(
+      'eu-central-1'
+    );
+    expect(getAwsClientConfig).to.have.been.calledOnceWithExactly({
+      profile: 'team',
+      region: 'us-east-1',
+    });
+    expect(S3).to.have.been.calledOnceWithExactly({ region: 'us-east-1', credentials: 'creds' });
   });
 });

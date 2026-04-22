@@ -1,22 +1,28 @@
 'use strict';
 
 const crypto = require('crypto');
-const AWS = require('@aws-sdk/client-cloudformation');
+const { CloudFormation } = require('@aws-sdk/client-cloudformation');
+const { getAwsClientConfig } = require('../../utils/aws');
 const { sleep } = require('../../utils');
+const getConfiguredStateBucketName = require('./get-configured-state-bucket-name');
 const remoteStateCloudFormationTemplate = require('./remote-state-cloudformation-template.json');
 const ServerlessError = require('../../serverless-error');
 
 const COMPOSE_REMOTE_STATE_STACK_NAME = 'serverless-compose-state';
 
-// TODO: INJECT RESOLVED AWS CREDENTIALS
-const getCloudFormationClient = () => {
+const getCloudFormationClient = (stateConfiguration = {}) => {
   // We are enforcing us-east-1 as the intention (that might change in the future if we find a good reason)
   // is to only create one such bucket across all regions in a single AWS Account
-  return new AWS.CloudFormation({ region: 'us-east-1' });
+  return new CloudFormation(
+    getAwsClientConfig({
+      profile: stateConfiguration.profile,
+      region: 'us-east-1',
+    })
+  );
 };
 
-const monitorStackCreation = async (stackName, context) => {
-  const client = getCloudFormationClient();
+const monitorStackCreation = async (stackName, context, stateConfiguration) => {
+  const client = getCloudFormationClient(stateConfiguration);
   const describeStacksResponse = await client.describeStacks({ StackName: stackName });
   const status = describeStacksResponse.Stacks[0].StackStatus;
 
@@ -24,7 +30,7 @@ const monitorStackCreation = async (stackName, context) => {
     // TODO: REMOVE WHEN REPLACED WITH PROGRESS
     context.logVerbose('Stack deployment in progress');
     await sleep(2000);
-    return await monitorStackCreation(stackName, context);
+    return await monitorStackCreation(stackName, context, stateConfiguration);
   }
 
   if (status === 'CREATE_COMPLETE') {
@@ -41,8 +47,8 @@ const monitorStackCreation = async (stackName, context) => {
 /**
  * @param {import('../../Context')} context
  */
-const ensureRemoteStateBucketStackExists = async (context) => {
-  const client = getCloudFormationClient();
+const ensureRemoteStateBucketStackExists = async (context, stateConfiguration) => {
+  const client = getCloudFormationClient(stateConfiguration);
   const templateBody = JSON.stringify(remoteStateCloudFormationTemplate);
 
   // TODO: REPLACE WITH PROGRESS
@@ -60,13 +66,13 @@ const ensureRemoteStateBucketStackExists = async (context) => {
     ],
   });
 
-  await monitorStackCreation(COMPOSE_REMOTE_STATE_STACK_NAME, context);
+  await monitorStackCreation(COMPOSE_REMOTE_STATE_STACK_NAME, context, stateConfiguration);
   context.output.log('S3 bucket for remote state created successfully');
   return bucketName;
 };
 
-const getStateBucketNameFromCF = async () => {
-  const client = getCloudFormationClient();
+const getStateBucketNameFromCF = async (stateConfiguration) => {
+  const client = getCloudFormationClient(stateConfiguration);
   const logicalResourceId = 'ServerlessComposeRemoteStateBucket';
   const result = await client.describeStackResource({
     StackName: COMPOSE_REMOTE_STATE_STACK_NAME,
@@ -90,13 +96,14 @@ const getStateBucketNameFromCF = async () => {
  */
 const getStateBucketName = async (stateConfiguration, context) => {
   // 1. Check from config
-  if (stateConfiguration && stateConfiguration.existingBucket) {
-    return stateConfiguration.existingBucket;
+  const configuredBucketName = getConfiguredStateBucketName(stateConfiguration);
+  if (configuredBucketName) {
+    return configuredBucketName;
   }
 
   // 2. Check from remote
   try {
-    return await getStateBucketNameFromCF();
+    return await getStateBucketNameFromCF(stateConfiguration);
   } catch (e) {
     // If message incldues 'does not exist', we need move forward and create the stack first
     if (!(e.Code === 'ValidationError' && e.message.includes('does not exist'))) {
@@ -110,7 +117,7 @@ const getStateBucketName = async (stateConfiguration, context) => {
 
   // 3. If stack does not exist, ensure it exists
   try {
-    return await ensureRemoteStateBucketStackExists(context);
+    return await ensureRemoteStateBucketStackExists(context, stateConfiguration);
   } catch (e) {
     if (e instanceof ServerlessError) {
       throw e;
