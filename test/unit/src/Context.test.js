@@ -1,6 +1,7 @@
 'use strict';
 
 const expect = require('chai').expect;
+const stripAnsi = require('strip-ansi');
 
 const Context = require('../../../src/Context');
 const readStream = require('../read-stream');
@@ -27,6 +28,6 @@ describe('test/unit/src/Context.test.js', () => {
 
     context.renderOutputs({ value: 1 });
 
-    expect(await readStream(context.output.stdout)).to.equal('value: 1\n');
+    expect(stripAnsi(await readStream(context.output.stdout))).to.equal('value: 1\n');
   });
 });

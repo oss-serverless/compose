@@ -10,17 +10,25 @@ const expect = chai.expect;
 
 describe('test/unit/src/utils/serverless-utils/log-reporters/node.test.js', () => {
   let originalArgv;
+  let originalInteractiveSetup;
+  let originalCi;
   let originalLogLevel;
   let originalLogDebug;
 
   beforeEach(() => {
     originalArgv = process.argv.slice();
+    originalInteractiveSetup = process.env.SLS_INTERACTIVE_SETUP_ENABLE;
+    originalCi = process.env.CI;
     originalLogLevel = process.env.SLS_LOG_LEVEL;
     originalLogDebug = process.env.SLS_LOG_DEBUG;
   });
 
   afterEach(() => {
     process.argv = originalArgv;
+    if (originalInteractiveSetup == null) delete process.env.SLS_INTERACTIVE_SETUP_ENABLE;
+    else process.env.SLS_INTERACTIVE_SETUP_ENABLE = originalInteractiveSetup;
+    if (originalCi == null) delete process.env.CI;
+    else process.env.CI = originalCi;
     if (originalLogLevel == null) delete process.env.SLS_LOG_LEVEL;
     else process.env.SLS_LOG_LEVEL = originalLogLevel;
     if (originalLogDebug == null) delete process.env.SLS_LOG_DEBUG;
@@ -28,22 +36,25 @@ describe('test/unit/src/utils/serverless-utils/log-reporters/node.test.js', () =
     sinon.restore();
   });
 
-  const loadModule = (uniGlobalState = {}) => {
-    const logReporter = sinon.stub();
-    const progressReporter = sinon.stub();
-    const outputEmitter = { on: sinon.stub() };
+  const loadModule = (uniGlobalState = {}, overrides = {}) => {
+    const logReporter = overrides.logReporter || sinon.stub();
+    const progressReporter = overrides.progressReporter || sinon.stub();
+    const outputEmitter = overrides.outputEmitter || { on: sinon.stub() };
+    const joinTextTokens = overrides.joinTextTokens || sinon.stub().returns('joined');
 
-    proxyquire.noCallThru().load('../../../../../../src/utils/serverless-utils/log-reporters/node', {
-      'uni-global': () => uniGlobalState,
-      '../lib/log-reporters/node/log-reporter': logReporter,
-      '../lib/log/get-output-reporter': { emitter: outputEmitter },
-      '../lib/log/join-text-tokens': sinon.stub().returns('joined'),
-      'log/levels': ['debug', 'info', 'notice'],
-      '../lib/log-reporters/node/style': {},
-      '../lib/log-reporters/node/progress-reporter': progressReporter,
-    });
+    proxyquire
+      .noCallThru()
+      .load('../../../../../../src/utils/serverless-utils/log-reporters/node', {
+        'uni-global': () => uniGlobalState,
+        '../lib/log-reporters/node/log-reporter': logReporter,
+        '../lib/log/get-output-reporter': { emitter: outputEmitter },
+        '../lib/log/join-text-tokens': joinTextTokens,
+        'log/levels': ['debug', 'info', 'notice'],
+        '../lib/log-reporters/node/style': {},
+        '../lib/log-reporters/node/progress-reporter': progressReporter,
+      });
 
-    return { logReporter, progressReporter, outputEmitter };
+    return { logReporter, progressReporter, outputEmitter, joinTextTokens };
   };
 
   it('sets SLS_LOG_LEVEL=info when verbose mode is enabled', () => {
@@ -99,5 +110,32 @@ describe('test/unit/src/utils/serverless-utils/log-reporters/node.test.js', () =
       logLevelIndex: 2,
       debugNamespaces: 'aws',
     });
+  });
+
+  it('registers the progress reporter when interactive setup is enabled', () => {
+    const uniGlobalState = {};
+    process.env.SLS_INTERACTIVE_SETUP_ENABLE = '1';
+
+    const { progressReporter } = loadModule(uniGlobalState);
+
+    expect(progressReporter).to.have.been.calledOnceWithExactly({ logLevelIndex: 2 });
+    expect(uniGlobalState.logIsInteractive).to.equal('1');
+  });
+
+  it('writes text-mode output events through joinTextTokens', () => {
+    const handlers = new Map();
+    const outputEmitter = {
+      on: sinon.stub().callsFake((eventName, handler) => {
+        handlers.set(eventName, handler);
+      }),
+    };
+    const joinTextTokens = sinon.stub().returns('joined\n');
+    const stdoutWrite = sinon.stub(process.stdout, 'write');
+
+    loadModule({}, { outputEmitter, joinTextTokens });
+    handlers.get('write')({ mode: 'text', textTokens: ['first', 'second'] });
+
+    expect(joinTextTokens).to.have.been.calledOnceWithExactly(['first', 'second']);
+    expect(stdoutWrite).to.have.been.calledOnceWithExactly('joined\n');
   });
 });

@@ -87,12 +87,24 @@ describe('test/unit/src/utils/aws/remote-provider.test.js', () => {
     expect(containerProvider.called).to.equal(false);
   });
 
-  it('does not disable IMDS when AWS_EC2_METADATA_DISABLED=false', () => {
+  it('disables IMDS whenever AWS_EC2_METADATA_DISABLED is set', async () => {
     const { remoteProvider, containerProvider, instanceProvider } = loadRemoteProvider();
     process.env.AWS_EC2_METADATA_DISABLED = 'false';
 
-    expect(remoteProvider({ timeout: 5 })).to.equal('instance-provider');
-    expect(instanceProvider).to.have.been.calledOnceWithExactly({ timeout: 5 });
+    await expect(remoteProvider({})()).to.be.eventually.rejectedWith(
+      'EC2 Instance Metadata Service access disabled'
+    );
     expect(containerProvider.called).to.equal(false);
+    expect(instanceProvider.called).to.equal(false);
+  });
+
+  it('prefers container metadata over IMDS disable settings', () => {
+    const { remoteProvider, containerProvider, instanceProvider } = loadRemoteProvider();
+    process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI = '/ecs';
+    process.env.AWS_EC2_METADATA_DISABLED = 'true';
+
+    expect(remoteProvider({ timeout: 5 })).to.equal('container-provider');
+    expect(containerProvider).to.have.been.calledOnceWithExactly({ timeout: 5 });
+    expect(instanceProvider.called).to.equal(false);
   });
 });

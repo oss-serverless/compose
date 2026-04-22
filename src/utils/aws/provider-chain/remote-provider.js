@@ -20,7 +20,7 @@ function remoteProvider(init) {
     return fromContainerMetadata(init);
   }
 
-  if (process.env[ENV_IMDS_DISABLED] && process.env[ENV_IMDS_DISABLED] !== 'false') {
+  if (process.env[ENV_IMDS_DISABLED]) {
     return async () => {
       throw new CredentialsProviderError('EC2 Instance Metadata Service access disabled');
     };

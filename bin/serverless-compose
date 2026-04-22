@@ -13,13 +13,21 @@ const minimumSupportedVersionMinor = 0;
 if (!isSupportedNodeVersion(process.version)) {
   const composeVersion = require('../package.json').version;
   process.stderr.write(
-    `\x1b[91mError: Serverless Framework Compose v${composeVersion} does not support ` +
+    `Error: Serverless Framework Compose v${composeVersion} does not support ` +
       `Node.js ${process.version}. Please upgrade Node.js to the latest ` +
-      `LTS version (v${minimumSupportedVersionMajor}.${minimumSupportedVersionMinor}.0 is a minimum supported version)\x1b[39m\n`
+      `LTS release. Minimum supported version: ` +
+      `v${minimumSupportedVersionMajor}.${minimumSupportedVersionMinor}.0.\n`
   );
   process.exit(1);
 }
 
+const crashAsync = (error) => {
+  process.nextTick(() => {
+    throw error;
+  });
+};
+
 const { runComponents } = require('../src');
 
-(async () => runComponents())();
+// Compose is npm-only, so there is no standalone or local-fallback bootstrap path here.
+runComponents().catch(crashAsync);

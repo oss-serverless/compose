@@ -151,9 +151,10 @@ describe('test/unit/src/components-service.test.js', () => {
 
     const localComponentsService = new ComponentsService(context, configuration, {});
 
-    await expect(localComponentsService.init())
-      .to.eventually.be.rejected
-      .and.have.property('code', 'CIRCULAR_GRAPH_DEPENDENCIES');
+    await expect(localComponentsService.init()).to.eventually.be.rejected.and.have.property(
+      'code',
+      'CIRCULAR_GRAPH_DEPENDENCIES'
+    );
   });
 
   it('deploys dependencies before dependents', async () => {

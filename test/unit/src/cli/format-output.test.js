@@ -115,6 +115,14 @@ describe('test/unit/src/cli/format-output.test.js', () => {
         },
       },
       arr: [[[[{ x: 1 }]]]],
+      multiline: {
+        a: {
+          b: {
+            c: 'line1\nline2',
+          },
+        },
+      },
+      multilineArr: [[[['line1\nline2']]]],
     });
 
     expect(stripAnsi(result)).to.equal(
@@ -124,6 +132,14 @@ describe('test/unit/src/cli/format-output.test.js', () => {
         '    c: ',
         '      d: (max depth reached)',
         'arr: ',
+        '  - ',
+        '    - ',
+        '      - (max depth reached)',
+        'multiline: ',
+        '  a: ',
+        '    b: ',
+        '      c: (max depth reached)',
+        'multilineArr: ',
         '  - ',
         '    - ',
         '      - (max depth reached)',

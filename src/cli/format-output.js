@@ -49,13 +49,21 @@ function renderArray(value, depth, indentation, renderNestedValue) {
       } else if (depth + 1 > MAX_DEPTH) {
         output += `${prefix}(max depth reached)\n`;
       } else {
-        output += `${prefix}\n${renderNestedValue(item, depth + 1, `${indentation}${INDENTATION}`)}`;
+        output += `${prefix}\n${renderNestedValue(
+          item,
+          depth + 1,
+          `${indentation}${INDENTATION}`
+        )}`;
       }
       continue;
     }
 
     if (typeof item === 'string' && !isSingleLineString(item)) {
-      output += `${prefix}\n${renderMultilineString(item, `${indentation}${INDENTATION}`)}`;
+      if (depth + 1 > MAX_DEPTH) {
+        output += `${prefix}(max depth reached)\n`;
+      } else {
+        output += `${prefix}\n${renderMultilineString(item, `${indentation}${INDENTATION}`)}`;
+      }
       continue;
     }
 
@@ -98,7 +106,11 @@ function renderObject(value, depth, indentation, renderNestedValue) {
     }
 
     if (typeof childValue === 'string' && !isSingleLineString(childValue)) {
-      output += `${prefix}\n${renderMultilineString(childValue, `${indentation}${INDENTATION}`)}`;
+      if (depth + 1 > MAX_DEPTH) {
+        output += `${prefix}(max depth reached)\n`;
+      } else {
+        output += `${prefix}\n${renderMultilineString(childValue, `${indentation}${INDENTATION}`)}`;
+      }
       continue;
     }
 
@@ -112,7 +124,11 @@ function renderObject(value, depth, indentation, renderNestedValue) {
       continue;
     }
 
-    output += `${prefix}\n${renderNestedValue(childValue, depth + 1, `${indentation}${INDENTATION}`)}`;
+    output += `${prefix}\n${renderNestedValue(
+      childValue,
+      depth + 1,
+      `${indentation}${INDENTATION}`
+    )}`;
   }
 
   return output;

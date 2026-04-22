@@ -45,6 +45,7 @@ const monitorStackCreation = async (stackName, context, stateConfiguration) => {
 };
 
 /**
+ * @param {Record<string, any>} stateConfiguration
  * @param {import('../../Context')} context
  */
 const ensureRemoteStateBucketStackExists = async (context, stateConfiguration) => {
@@ -105,14 +106,13 @@ const getStateBucketName = async (stateConfiguration, context) => {
   try {
     return await getStateBucketNameFromCF(stateConfiguration);
   } catch (e) {
-    // If message incldues 'does not exist', we need move forward and create the stack first
+    // If message includes 'does not exist', we need to move forward and create the stack first
     if (!(e.Code === 'ValidationError' && e.message.includes('does not exist'))) {
       throw new ServerlessError(
         `Could not retrieve S3 state bucket: ${e.message}`,
         'CANNOT_RETRIEVE_REMOTE_STATE_S3_BUCKET'
       );
     }
-    // PASS
   }
 
   // 3. If stack does not exist, ensure it exists

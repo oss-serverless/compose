@@ -1,13 +1,64 @@
-name: Tests
+name: Validate
 
 on:
-  push:
   pull_request:
+    branches: [main]
+  push:
+    branches: [main]
 
 env:
   FORCE_COLOR: 1
 
 jobs:
+  linuxNode22:
+    name: '[Linux] Node 22: Lint, Formatting, Unit & packaging tests'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 30
+
+      - name: Retrieve last main commit (for `git diff` purposes)
+        run: |
+          git checkout -b pr
+          git fetch --prune --depth=30 origin +refs/heads/main:refs/remotes/origin/main
+          git checkout main
+          git checkout pr
+
+      - name: Retrieve dependencies from cache
+        id: cacheNpm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-v22-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            npm-v22-${{ runner.os }}-${{ github.ref }}-
+            npm-v22-${{ runner.os }}-refs/heads/main-
+
+      - name: Install Node.js and npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate formatting
+        run: npm run prettier-check:updated
+
+      - name: Validate lint rules
+        run: npm run lint:updated
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Verify package contents
+        run: npm pack --dry-run
+
+      - name: Packed install smoke test
+        run: node ./scripts/ci/pack-smoke.js
+
   windowsNode22:
     name: '[Windows] Node 22: Unit tests'
     runs-on: windows-latest
@@ -20,10 +71,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: npm-v22-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('package.json') }}
+          key: npm-v20-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('package.json') }}
           restore-keys: |
-            npm-v22-${{ runner.os }}-${{ github.ref }}-
-            npm-v22-${{ runner.os }}-refs/heads/main-
+            npm-v20-${{ runner.os }}-${{ github.ref }}-
+            npm-v20-${{ runner.os }}-refs/heads/main-
 
       - name: Install Node.js and npm
         uses: actions/setup-node@v4
@@ -61,20 +112,5 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Lint
-        run: npm run lint
-
       - name: Unit tests
         run: npm test
-
-      - name: Verify package contents
-        run: npm pack --dry-run
-
-      - name: Install packed tarball smoke test
-        run: |
-          PACKAGE_TGZ="$(npm pack --silent)"
-          TMPDIR="$(mktemp -d)"
-          npm init -y --prefix "$TMPDIR" >/dev/null
-          npm install --prefix "$TMPDIR" "./$PACKAGE_TGZ" >/dev/null
-          node "$TMPDIR/node_modules/@osls/compose/bin/serverless-compose" --help >/dev/null
-          rm -rf "$TMPDIR" "$PACKAGE_TGZ"
