@@ -1,7 +1,10 @@
 'use strict';
 
+const fs = require('node:fs').promises;
+const path = require('path');
 const proxyquire = require('proxyquire');
 const chai = require('chai');
+const fse = require('fs-extra');
 const sinon = require('sinon');
 const Context = require('../../../../src/Context');
 const ComponentContext = require('../../../../src/ComponentContext');
@@ -544,5 +547,57 @@ describe('test/unit/components/framework/index.test.js', () => {
     expect(() => new ServerlessFramework('id', context, { path: '.' }))
       .to.throw()
       .and.have.property('code', 'INVALID_PATH_IN_SERVICE_CONFIGURATION');
+  });
+
+  it('expands literal directory cache patterns when calculating hashes', async () => {
+    const serviceDir = await fs.mkdtemp(path.join(process.cwd(), 'cache-hash-dir-'));
+
+    try {
+      await fse.outputFile(path.join(serviceDir, 'src', 'handler.js'), 'module.exports = 1;\n');
+
+      const context = await getContext();
+      const directoryPatternComponent = new ServerlessFramework('id', context, {
+        path: serviceDir,
+        cachePatterns: ['src'],
+      });
+      const globPatternComponent = new ServerlessFramework('id', context, {
+        path: serviceDir,
+        cachePatterns: ['src/**/*'],
+      });
+
+      expect(await directoryPatternComponent.calculateCacheHash()).to.equal(
+        await globPatternComponent.calculateCacheHash()
+      );
+    } finally {
+      await fse.remove(serviceDir);
+    }
+  });
+
+  it('supports negated cache patterns that re-include a later file', async () => {
+    const serviceDir = await fs.mkdtemp(path.join(process.cwd(), 'cache-hash-negation-'));
+
+    try {
+      await Promise.all([
+        fse.outputFile(path.join(serviceDir, 'keep.js'), 'keep\n'),
+        fse.outputFile(path.join(serviceDir, 'ignored', 'drop.js'), 'drop\n'),
+        fse.outputFile(path.join(serviceDir, 'ignored', 'reinclude.js'), 'reinclude\n'),
+      ]);
+
+      const context = await getContext();
+      const negatedPatternComponent = new ServerlessFramework('id', context, {
+        path: serviceDir,
+        cachePatterns: ['**/*', '!ignored/**/*', 'ignored/reinclude.js'],
+      });
+      const explicitPatternComponent = new ServerlessFramework('id', context, {
+        path: serviceDir,
+        cachePatterns: ['keep.js', 'ignored/reinclude.js'],
+      });
+
+      expect(await negatedPatternComponent.calculateCacheHash()).to.equal(
+        await explicitPatternComponent.calculateCacheHash()
+      );
+    } finally {
+      await fse.remove(serviceDir);
+    }
   });
 });

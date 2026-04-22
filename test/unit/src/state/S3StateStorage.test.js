@@ -9,6 +9,17 @@ const S3StateStorage = require('../../../../src/state/S3StateStorage');
 
 const expect = chai.expect;
 
+const createDeferred = () => {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+};
+
 describe('test/unit/src/state/S3StateStorage.test.js', () => {
   const bucketName = 'dummy-bucket';
   const stateKey = 'dummy-key';
@@ -107,5 +118,46 @@ describe('test/unit/src/state/S3StateStorage.test.js', () => {
       region: 'eu-central-1',
       credentials: 'creds',
     });
+  });
+
+  it('serializes concurrent state writes', async () => {
+    const firstWrite = createDeferred();
+    const secondWrite = createDeferred();
+    let activeWrites = 0;
+    let maxActiveWrites = 0;
+    const s3StateStorage = new S3StateStorage({ bucketName, stateKey });
+    const mockedS3Client = {
+      putObject: sinon.stub().callsFake(() => {
+        activeWrites += 1;
+        maxActiveWrites = Math.max(maxActiveWrites, activeWrites);
+        const currentWrite = mockedS3Client.putObject.callCount === 1 ? firstWrite : secondWrite;
+        return currentWrite.promise.finally(() => {
+          activeWrites -= 1;
+        });
+      }),
+    };
+
+    s3StateStorage.s3Client = mockedS3Client;
+    s3StateStorage.state = { first: true };
+
+    const firstPromise = s3StateStorage.writeState();
+    s3StateStorage.state = { second: true };
+    const secondPromise = s3StateStorage.writeState();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockedS3Client.putObject.calledOnce).to.equal(true);
+
+    firstWrite.resolve();
+    await firstPromise;
+    await Promise.resolve();
+
+    expect(mockedS3Client.putObject.calledTwice).to.equal(true);
+
+    secondWrite.resolve();
+    await Promise.all([firstPromise, secondPromise]);
+
+    expect(maxActiveWrites).to.equal(1);
   });
 });
