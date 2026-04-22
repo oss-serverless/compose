@@ -2,7 +2,7 @@
 
 const { resolve } = require('path');
 const { isEmpty, path } = require('ramda');
-const { Graph, alg } = require('graphlib');
+const { Graph, alg } = require('@dagrejs/graphlib');
 const traverse = require('traverse');
 const pLimit = require('p-limit');
 const ServerlessError = require('./serverless-error');

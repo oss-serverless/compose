@@ -237,13 +237,6 @@ class ServerlessFramework {
       args.push('--region', this.inputs.region);
     }
 
-    // Patch required for standalone distribution of Serverless
-    // Needed because of the behavior of `pkg` when invoking itself via subprocess
-    // https://github.com/vercel/pkg/issues/897
-    if (command === 'serverless' && process.pkg) {
-      args = [process.pkg.entrypoint, ...args];
-    }
-
     this.context.logVerbose(`Running "${command} ${args.join(' ')}"`);
     return new Promise((resolve, reject) => {
       const child = spawn(command, args, {

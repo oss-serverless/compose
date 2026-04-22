@@ -1,8 +1,9 @@
 'use strict';
 
-const { getCredentialProvider } = require('@serverless-components/utils-aws');
+const { getAwsClientConfig } = require('../utils/aws');
 
 const S3StateStorage = require('./S3StateStorage');
+const getConfiguredStateBucketName = require('./utils/get-configured-state-bucket-name');
 const getStateBucketName = require('./utils/get-state-bucket-name');
 const getStateBucketRegion = require('./utils/get-state-bucket-region');
 
@@ -17,14 +18,22 @@ const getS3StateStorageFromConfig = async (stateConfiguration, context) => {
     context.stage
   }/state.json`;
 
-  // We want to resolve region from S3 only for externally provided S3 buckets to avoid extra SDK call
-  const region = stateConfiguration.externalBucket
-    ? await getStateBucketRegion(bucketName)
+  const configuredBucketName = getConfiguredStateBucketName(stateConfiguration);
+  const region = configuredBucketName
+    ? await getStateBucketRegion(bucketName, stateConfiguration)
     : 'us-east-1';
 
-  const credentialProvider = getCredentialProvider({ profile: stateConfiguration.profile, region });
+  const awsClientConfig = getAwsClientConfig({
+    profile: stateConfiguration.profile,
+    region,
+  });
 
-  return new S3StateStorage({ bucketName, stateKey, region, credentials: credentialProvider });
+  return new S3StateStorage({
+    bucketName,
+    stateKey,
+    region,
+    credentials: awsClientConfig.credentials,
+  });
 };
 
 module.exports = getS3StateStorageFromConfig;

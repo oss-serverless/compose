@@ -1,7 +1,7 @@
 'use strict';
 
 // Setup log writing
-require('@serverless/utils/log-reporters/node');
+require('./utils/serverless-utils/log-reporters/node');
 
 const args = require('minimist')(process.argv.slice(2));
 const renderHelp = require('./render-help');

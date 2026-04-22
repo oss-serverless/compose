@@ -1,12 +1,33 @@
 #!/usr/bin/env node
 
-// Used to measure length of the whole command
-EvalError.$composeCommandStartTime = process.hrtime();
+'use strict';
 
-const { runComponents } = require('../src')
+// `EvalError` is used to not pollute global namespace but still have the value accessible globally
+const isMainModule = !EvalError.$composeCommandStartTime;
+if (isMainModule) EvalError.$composeCommandStartTime = process.hrtime();
 
+const isSupportedNodeVersion = require('../src/cli/is-supported-node-version');
+const minimumSupportedVersionMajor = 20;
+const minimumSupportedVersionMinor = 0;
 
-// Run
-;(async () => {
-  return runComponents()
-})();
+if (!isSupportedNodeVersion(process.version)) {
+  const composeVersion = require('../package.json').version;
+  process.stderr.write(
+    `Error: Serverless Framework Compose v${composeVersion} does not support ` +
+      `Node.js ${process.version}. Please upgrade Node.js to the latest ` +
+      `LTS release. Minimum supported version: ` +
+      `v${minimumSupportedVersionMajor}.${minimumSupportedVersionMinor}.0.\n`
+  );
+  process.exit(1);
+}
+
+const crashAsync = (error) => {
+  process.nextTick(() => {
+    throw error;
+  });
+};
+
+const { runComponents } = require('../src');
+
+// Compose is npm-only, so there is no standalone or local-fallback bootstrap path here.
+runComponents().catch(crashAsync);

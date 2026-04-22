@@ -232,6 +232,46 @@ describe('test/unit/components/framework/index.test.js', () => {
     expect(spawnStub.getCall(0).args[2].env.SLS_COMPOSE).to.equal('1');
   });
 
+  it('passes through serverless logging env vars to child processes', async () => {
+    const originalLogLevel = process.env.SLS_LOG_LEVEL;
+    const originalLogDebug = process.env.SLS_LOG_DEBUG;
+
+    try {
+      process.env.SLS_LOG_LEVEL = 'info';
+      process.env.SLS_LOG_DEBUG = 'aws';
+
+      const spawnStub = sinon.stub().returns({
+        on: (arg, cb) => {
+          if (arg === 'close') cb(0);
+        },
+        stdout: {
+          on: (arg, cb) => {
+            const data = 'region: us-east-1\n\nStack Outputs:\n  Key: Output';
+            if (arg === 'data') cb(data);
+          },
+        },
+        kill: () => {},
+      });
+      const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
+        'cross-spawn': spawnStub,
+      });
+
+      const context = await getContext();
+      const component = new FrameworkComponent('some-id', context, { path: 'path' });
+      context.state.detectedFrameworkVersion = '9.9.9';
+      await component.refreshOutputs();
+
+      expect(spawnStub).to.be.calledOnce;
+      expect(spawnStub.getCall(0).args[2].env.SLS_LOG_LEVEL).to.equal('info');
+      expect(spawnStub.getCall(0).args[2].env.SLS_LOG_DEBUG).to.equal('aws');
+    } finally {
+      if (originalLogLevel == null) delete process.env.SLS_LOG_LEVEL;
+      else process.env.SLS_LOG_LEVEL = originalLogLevel;
+      if (originalLogDebug == null) delete process.env.SLS_LOG_DEBUG;
+      else process.env.SLS_LOG_DEBUG = originalLogDebug;
+    }
+  });
+
   it('correctly handles refresh-outputs with malformed info outputs', async () => {
     const spawnStub = sinon.stub().returns({
       on: (arg, cb) => {

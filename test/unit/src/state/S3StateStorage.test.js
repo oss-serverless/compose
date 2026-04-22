@@ -1,6 +1,7 @@
 'use strict';
 
 const chai = require('chai');
+const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const stream = require('stream');
 
@@ -86,6 +87,28 @@ describe('test/unit/src/state/S3StateStorage.test.js', () => {
     expect(mockedS3Client.deleteObject).to.have.been.calledOnceWithExactly({
       Bucket: bucketName,
       Key: stateKey,
+    });
+  });
+
+  it('passes region and credentials into the S3 client constructor', () => {
+    const S3 = sinon.stub().returns({});
+    const S3StateStorageWithStubbedClient = proxyquire
+      .noCallThru()
+      .load('../../../../src/state/S3StateStorage', {
+        '@aws-sdk/client-s3': { S3 },
+      });
+
+    const stateStorage = new S3StateStorageWithStubbedClient({
+      bucketName,
+      stateKey,
+      region: 'eu-central-1',
+      credentials: 'creds',
+    });
+
+    expect(stateStorage).to.be.instanceOf(S3StateStorageWithStubbedClient);
+    expect(S3).to.have.been.calledOnceWithExactly({
+      region: 'eu-central-1',
+      credentials: 'creds',
     });
   });
 });
