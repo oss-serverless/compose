@@ -3,7 +3,7 @@
 const spawn = require('cross-spawn');
 const YAML = require('js-yaml');
 const hasha = require('hasha');
-const globby = require('../../src/utils/glob');
+const glob = require('../../src/utils/glob');
 const path = require('path');
 const spawnExt = require('child-process-ext/spawn');
 const semver = require('semver');
@@ -316,7 +316,7 @@ class ServerlessFramework {
   async calculateCacheHash() {
     const algorithm = 'md5'; // fastest
 
-    const allFilePaths = await globby(this.inputs.cachePatterns, {
+    const allFilePaths = await glob(this.inputs.cachePatterns, {
       cwd: this.inputs.path,
     });
 
