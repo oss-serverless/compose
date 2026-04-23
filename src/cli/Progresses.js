@@ -7,10 +7,10 @@
  */
 
 const cliCursor = require('cli-cursor');
-const colors = require('./colors');
+const { stderrCliColors: colors } = require('./colors');
 const symbols = require('./symbols');
 const isUnicodeSupported = require('is-unicode-supported');
-const stripAnsi = require('strip-ansi');
+const { stripVTControlCharacters: stripAnsi } = require('node:util');
 
 const dots = {
   frames: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],

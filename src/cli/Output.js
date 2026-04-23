@@ -1,9 +1,9 @@
 'use strict';
 
-const colors = require('./colors');
+const { stdoutCliColors, stderrCliColors } = require('./colors');
 const symbols = require('./symbols');
 const fs = require('fs');
-const stripAnsi = require('strip-ansi');
+const { stripVTControlCharacters: stripAnsi } = require('node:util');
 const path = require('path');
 const isInteractiveTerminal = require('is-interactive');
 const { PassThrough } = require('stream');
@@ -49,7 +49,7 @@ class Output {
    * @param {string[]} [namespace]
    */
   writeText(message = '', namespace = []) {
-    message = this.namespaceLogMessage(message, namespace);
+    message = this.namespaceLogMessage(message, namespace, stdoutCliColors);
     this.safeWrite(message);
     this.writeToLogsFile(message);
   }
@@ -60,7 +60,7 @@ class Output {
    * @param {string[]} [namespace]
    */
   log(message, namespace = []) {
-    message = this.namespaceLogMessage(message, namespace);
+    message = this.namespaceLogMessage(message, namespace, stderrCliColors);
     this.safeWrite(message, false);
     this.writeToLogsFile(message);
   }
@@ -72,7 +72,7 @@ class Output {
   verbose(message, namespace) {
     if (!message || message === '') return;
 
-    this.writeToLogsFile(this.namespaceLogMessage(message, namespace));
+    this.writeToLogsFile(this.namespaceLogMessage(message, namespace, stderrCliColors));
 
     if (this.verboseMode) {
       this.doLogVerbose(message, namespace);
@@ -91,10 +91,10 @@ class Output {
   error(error, namespace = []) {
     if (this.verboseMode && error instanceof Error) {
       // Print the stack trace in verbose mode
-      this.log(`${colors.red('Error:')} ${error.stack}`, namespace);
+      this.log(`${stderrCliColors.red('Error:')} ${error.stack}`, namespace);
     } else {
       error = error instanceof Error ? error.message : error;
-      this.log(`${colors.red('Error:')} ${error}`, namespace);
+      this.log(`${stderrCliColors.red('Error:')} ${error}`, namespace);
     }
   }
 
@@ -113,8 +113,8 @@ class Output {
    * @param {string[]} [namespace]
    */
   doLogVerbose(message, namespace) {
-    message = colors.gray(message);
-    message = this.namespaceLogMessage(message, namespace);
+    message = stderrCliColors.gray(message);
+    message = this.namespaceLogMessage(message, namespace, stderrCliColors);
     this.safeWrite(message, false);
   }
 
@@ -133,9 +133,8 @@ class Output {
    * @param {string[]} [namespace]
    * @return {string}
    */
-  namespaceLogMessage(text, namespace) {
-    text = text || '';
-    const prefix = this.generatePrefix(namespace);
+  namespaceLogMessage(text = '', namespace = [], palette = stdoutCliColors) {
+    const prefix = this.generatePrefix(namespace, palette);
     return text
       .split('\n')
       .map((line) => `${prefix}${line}`)
@@ -147,13 +146,15 @@ class Output {
    * @param {string[]} [namespace]
    * @return string
    */
-  generatePrefix(namespace) {
-    if (!namespace) {
+  generatePrefix(namespace = [], palette = stdoutCliColors) {
+    if (!namespace || namespace.length === 0) {
       return '';
     }
+
+    const gray = typeof palette.gray === 'function' ? palette.gray : stdoutCliColors.gray;
     let prefix = namespace.join(` ${symbols.separator} `);
     if (prefix.length > 0) {
-      prefix = colors.gray(`${prefix} ${symbols.separator} `);
+      prefix = gray(`${prefix} ${symbols.separator} `);
     }
     return prefix;
   }

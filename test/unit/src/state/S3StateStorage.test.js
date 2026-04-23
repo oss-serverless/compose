@@ -146,6 +146,7 @@ describe('test/unit/src/state/S3StateStorage.test.js', () => {
 
     await Promise.resolve();
     await Promise.resolve();
+    await Promise.resolve();
 
     expect(mockedS3Client.putObject.calledOnce).to.equal(true);
 
@@ -159,5 +160,43 @@ describe('test/unit/src/state/S3StateStorage.test.js', () => {
     await Promise.all([firstPromise, secondPromise]);
 
     expect(maxActiveWrites).to.equal(1);
+  });
+
+  it('continues queued state writes after a failed write', async () => {
+    const s3StateStorage = new S3StateStorage({ bucketName, stateKey });
+    const mockedS3Client = {
+      putObject: sinon.stub(),
+    };
+
+    mockedS3Client.putObject.onFirstCall().callsFake(() => {
+      throw new Error('boom');
+    });
+    mockedS3Client.putObject.onSecondCall().resolves();
+
+    s3StateStorage.s3Client = mockedS3Client;
+    s3StateStorage.state = { first: true };
+
+    const firstPromise = s3StateStorage.writeState();
+    const firstErrorPromise = firstPromise.then(
+      () => null,
+      (error) => error
+    );
+    s3StateStorage.state = { second: true };
+    const secondPromise = s3StateStorage.writeState();
+
+    const firstError = await firstErrorPromise;
+    expect(firstError).to.have.property('code', 'CANNOT_UPDATE_S3_REMOTE_STATE');
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockedS3Client.putObject.calledTwice).to.equal(true);
+
+    await secondPromise;
+    expect(mockedS3Client.putObject.secondCall).to.have.been.calledWithExactly({
+      Bucket: bucketName,
+      Key: stateKey,
+      Body: JSON.stringify({ second: true }),
+    });
   });
 });

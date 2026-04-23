@@ -1,7 +1,7 @@
 'use strict';
 
 const { S3 } = require('@aws-sdk/client-s3');
-const pLimit = require('p-limit');
+const pLimit = require('../utils/p-limit');
 const streamToString = require('../utils/stream-to-string');
 const ServerlessError = require('../serverless-error');
 const BaseStateStorage = require('./BaseStateStorage');

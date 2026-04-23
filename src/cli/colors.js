@@ -1,14 +1,20 @@
 'use strict';
 
-// @ts-nocheck Types do not work with chalk for some reason
-const chalk = require('chalk');
+const { stdoutColors, stderrColors } = require('../utils/colors');
 
-const colorSupportLevel = chalk.supportsColor ? chalk.supportsColor.level : 0;
+const createCliPalette = (colors) => ({
+  foreground: colors.reset,
+  gray: colors.gray,
+  red: colors.brandRed,
+  warning: colors.warning,
+  white: colors.white,
+});
+
+const stdoutCliColors = createCliPalette(stdoutColors);
+const stderrCliColors = createCliPalette(stderrColors);
 
 module.exports = {
-  foreground: chalk.reset,
-  gray: colorSupportLevel > 2 ? chalk.rgb(140, 141, 145) : chalk.gray,
-  red: colorSupportLevel > 2 ? chalk.rgb(253, 87, 80) : chalk.redBright,
-  warning: chalk.rgb(255, 165, 0),
-  white: chalk.white,
+  ...stdoutCliColors,
+  stdoutCliColors,
+  stderrCliColors,
 };

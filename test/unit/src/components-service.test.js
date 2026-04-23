@@ -6,10 +6,21 @@ const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const ComponentsService = require('../../../src/ComponentsService');
 const Context = require('../../../src/Context');
-const stripAnsi = require('strip-ansi');
+const { stripVTControlCharacters: stripAnsi } = require('node:util');
 const readStream = require('../read-stream');
 
 const expect = chai.expect;
+
+const createDeferred = () => {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+};
 
 const frameworkComponentPath = path.dirname(
   require.resolve('../../../components/framework/index.js')
@@ -359,6 +370,74 @@ describe('test/unit/src/components-service.test.js', () => {
     expect(context.componentCommandsOutcomes.foundation).to.equal('success');
     expect(context.componentCommandsOutcomes.api).to.equal('failure');
     expect(context.componentCommandsOutcomes.app).to.equal('skip');
+  });
+
+  it('honors max-concurrency for parallel component commands', async () => {
+    const release = createDeferred();
+    const twoStarted = createDeferred();
+    const started = [];
+    let active = 0;
+    let maxActive = 0;
+    const loadComponent = sinon.stub().callsFake(async ({ alias }) => ({
+      async info() {
+        started.push(alias);
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        if (active === 2) {
+          twoStarted.resolve();
+        }
+        await release.promise;
+        active -= 1;
+      },
+    }));
+    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
+      './load': { loadComponent },
+    });
+
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+    context.stateStorage.readComponentsOutputs = async () => ({});
+
+    const configuration = {
+      services: {
+        foundation: {
+          component: '@foo/foundation',
+          path: 'foundation',
+        },
+        api: {
+          component: '@foo/api',
+          path: 'api',
+        },
+        worker: {
+          component: '@foo/worker',
+          path: 'worker',
+        },
+      },
+    };
+
+    const localComponentsService = new ComponentsServiceWithStubbedLoad(context, configuration, {
+      'max-concurrency': 2,
+    });
+    await localComponentsService.init();
+
+    const infoPromise = localComponentsService.info({ 'max-concurrency': 2 });
+
+    await twoStarted.promise;
+
+    expect(active).to.equal(2);
+    expect(maxActive).to.equal(2);
+    expect(started.length).to.equal(2);
+
+    release.resolve();
+    await infoPromise;
+
+    expect(maxActive).to.equal(2);
+    expect(started).to.have.members(['foundation', 'api', 'worker']);
   });
 
   it('correctly handles outputs command', async () => {

@@ -1,7 +1,7 @@
 'use strict';
 
 const expect = require('chai').expect;
-const stripAnsi = require('strip-ansi');
+const { stripVTControlCharacters: stripAnsi } = require('node:util');
 
 const Context = require('../../../src/Context');
 const readStream = require('../read-stream');
