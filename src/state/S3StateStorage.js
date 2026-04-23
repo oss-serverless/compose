@@ -1,12 +1,10 @@
 'use strict';
 
 const { S3 } = require('@aws-sdk/client-s3');
-const PromiseQueue = require('promise-queue');
+const pLimit = require('p-limit');
 const streamToString = require('../utils/stream-to-string');
 const ServerlessError = require('../serverless-error');
 const BaseStateStorage = require('./BaseStateStorage');
-
-PromiseQueue.configure(Promise);
 
 class S3StateStorage extends BaseStateStorage {
   constructor(config = {}) {
@@ -20,7 +18,7 @@ class S3StateStorage extends BaseStateStorage {
 
     this.s3Client = new S3({ region: this.region, credentials: config.credentials });
 
-    this.writeRequestQueue = new PromiseQueue(1, Infinity);
+    this.writeRequestQueue = pLimit(1);
   }
 
   async readState() {
@@ -52,7 +50,7 @@ class S3StateStorage extends BaseStateStorage {
 
   async writeState() {
     try {
-      await this.writeRequestQueue.add(async () => {
+      await this.writeRequestQueue(async () => {
         await this.s3Client.putObject({
           Bucket: this.bucketName,
           Key: this.stateKey,
