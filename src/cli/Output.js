@@ -133,8 +133,7 @@ class Output {
    * @param {string[]} [namespace]
    * @return {string}
    */
-  namespaceLogMessage(text, namespace, palette) {
-    text = text || '';
+  namespaceLogMessage(text = '', namespace = [], palette = stdoutCliColors) {
     const prefix = this.generatePrefix(namespace, palette);
     return text
       .split('\n')
@@ -147,13 +146,15 @@ class Output {
    * @param {string[]} [namespace]
    * @return string
    */
-  generatePrefix(namespace, palette) {
-    if (!namespace) {
+  generatePrefix(namespace = [], palette = stdoutCliColors) {
+    if (!namespace || namespace.length === 0) {
       return '';
     }
+
+    const gray = typeof palette.gray === 'function' ? palette.gray : stdoutCliColors.gray;
     let prefix = namespace.join(` ${symbols.separator} `);
     if (prefix.length > 0) {
-      prefix = palette.gray(`${prefix} ${symbols.separator} `);
+      prefix = gray(`${prefix} ${symbols.separator} `);
     }
     return prefix;
   }

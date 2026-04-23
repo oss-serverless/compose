@@ -21,6 +21,13 @@ describe('test/unit/lib/cli/Output.test.js', () => {
     expect(await readStream(output.logsFileStream)).to.equal('Message\n');
   });
 
+  it('defaults helper palettes to stdout colors', () => {
+    expect(output.generatePrefix(['service'])).to.equal(colors.gray('service › '));
+    expect(output.namespaceLogMessage('Message', ['service'])).to.equal(
+      `${colors.gray('service › ')}Message`
+    );
+  });
+
   it('uses stream-specific palettes for stdout and stderr output', async () => {
     const OutputWithStubbedColors = proxyquire.noCallThru().load('../../../../src/cli/Output', {
       './colors': {

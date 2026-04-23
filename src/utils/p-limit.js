@@ -5,14 +5,49 @@ module.exports = (concurrency) => {
     throw new TypeError('Expected `concurrency` to be a number from 1 and up');
   }
 
-  const queue = [];
   let activeCount = 0;
+  let queueHead = null;
+  let queueTail = null;
+  let queueSize = 0;
+
+  const enqueueTask = (task) => {
+    const node = { task, next: null };
+
+    if (queueTail) {
+      queueTail.next = node;
+    } else {
+      queueHead = node;
+    }
+
+    queueTail = node;
+    queueSize += 1;
+  };
+
+  const dequeueTask = () => {
+    if (!queueHead) {
+      return undefined;
+    }
+
+    const task = queueHead.task;
+    queueHead = queueHead.next;
+    if (!queueHead) {
+      queueTail = null;
+    }
+    queueSize -= 1;
+    return task;
+  };
+
+  const clearQueue = () => {
+    queueHead = null;
+    queueTail = null;
+    queueSize = 0;
+  };
 
   const next = () => {
     activeCount -= 1;
 
-    if (queue.length > 0) {
-      queue.shift()();
+    if (queueSize > 0) {
+      dequeueTask()();
     }
   };
 
@@ -33,11 +68,11 @@ module.exports = (concurrency) => {
   };
 
   const enqueue = (fn, resolve, args) => {
-    queue.push(run.bind(null, fn, resolve, args));
+    enqueueTask(run.bind(null, fn, resolve, args));
 
     Promise.resolve().then(() => {
-      if (activeCount < concurrency && queue.length > 0) {
-        queue.shift()();
+      if (activeCount < concurrency && queueSize > 0) {
+        dequeueTask()();
       }
     });
   };
@@ -52,12 +87,10 @@ module.exports = (concurrency) => {
       get: () => activeCount,
     },
     pendingCount: {
-      get: () => queue.length,
+      get: () => queueSize,
     },
     clearQueue: {
-      value: () => {
-        queue.length = 0;
-      },
+      value: clearQueue,
     },
   });
 
