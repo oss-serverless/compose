@@ -3,22 +3,19 @@
 const d = require('d');
 const autoBind = require('d/auto-bind');
 const identity = require('ext/function/identity');
-const chalk = require('chalk');
-const supportsColor = require('supports-color');
+const { stderrColors } = require('../../../../colors');
 const { style, log } = require('../../../log');
 const joinTextTokens = require('../../log/join-text-tokens');
 
-const colorSupportLevel = supportsColor.stderr ? supportsColor.stderr.level : 0;
-
 const cliStyle = {
-  aside: colorSupportLevel > 2 ? chalk.rgb(140, 141, 145) : chalk.gray,
-  error: colorSupportLevel > 2 ? chalk.rgb(253, 87, 80) : chalk.redBright,
+  aside: stderrColors.gray,
+  error: stderrColors.brandRed,
   link: identity,
-  linkStrong: chalk.underline,
-  noticeSymbol: colorSupportLevel > 2 ? chalk.rgb(253, 87, 80) : chalk.redBright,
-  strong: colorSupportLevel > 2 ? chalk.rgb(253, 87, 80) : chalk.redBright,
-  title: chalk.underline,
-  warning: chalk.rgb(255, 165, 0),
+  linkStrong: stderrColors.underline,
+  noticeSymbol: stderrColors.brandRed,
+  strong: stderrColors.brandRed,
+  title: stderrColors.underline,
+  warning: stderrColors.warning,
 };
 
 for (const key of Object.keys(style)) {

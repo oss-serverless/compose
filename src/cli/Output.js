@@ -3,7 +3,7 @@
 const colors = require('./colors');
 const symbols = require('./symbols');
 const fs = require('fs');
-const stripAnsi = require('strip-ansi');
+const { stripVTControlCharacters: stripAnsi } = require('node:util');
 const path = require('path');
 const isInteractiveTerminal = require('is-interactive');
 const { PassThrough } = require('stream');

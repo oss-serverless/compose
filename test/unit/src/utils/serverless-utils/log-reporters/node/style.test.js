@@ -1,0 +1,45 @@
+'use strict';
+
+const expect = require('chai').expect;
+const proxyquire = require('proxyquire');
+
+describe('test/unit/src/utils/serverless-utils/log-reporters/node/style.test.js', () => {
+  it('uses stderr colors for log reporter styles', () => {
+    const styleState = {
+      aside: (value) => value,
+      error: (value) => value,
+      link: (value) => value,
+      linkStrong: (value) => value,
+      noticeSymbol: (value) => value,
+      strong: (value) => value,
+      title: (value) => value,
+      warning: (value) => value,
+    };
+
+    proxyquire
+      .noCallThru()
+      .load('../../../../../../../src/utils/serverless-utils/lib/log-reporters/node/style', {
+        d: (value) => value,
+        'd/auto-bind': (value) => value,
+        'ext/function/identity': (value) => value,
+        '../../../../colors': {
+          stderrColors: {
+            gray: (value) => `stderr-gray(${value})`,
+            brandRed: (value) => `stderr-red(${value})`,
+            underline: (value) => `stderr-underline(${value})`,
+            warning: (value) => `stderr-warning(${value})`,
+          },
+        },
+        '../../../log': {
+          style: styleState,
+          log: { notice: () => {} },
+        },
+        '../../log/join-text-tokens': (tokens) => `${tokens.join('')}\n`,
+      });
+
+    expect(styleState.aside('x')).to.equal('stderr-gray(x)');
+    expect(styleState.error('x')).to.equal('stderr-red(x)');
+    expect(styleState.title('x')).to.equal('stderr-underline(x)');
+    expect(styleState.warning('x')).to.equal('stderr-warning(x)');
+  });
+});
