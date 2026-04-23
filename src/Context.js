@@ -10,7 +10,7 @@ const Output = require('./cli/Output');
 const readline = require('readline');
 const formatOutput = require('./cli/format-output');
 const Progresses = require('./cli/Progresses');
-const colors = require('./cli/colors');
+const { stderrCliColors } = require('./cli/colors');
 const ServerlessError = require('./serverless-error');
 
 class Context {
@@ -26,7 +26,7 @@ class Context {
 
     this.progresses = new Progresses(this.output);
     if (!config.verbose) {
-      this.progresses.setFooterText(colors.gray('Press [?] to enable verbose logs'));
+      this.progresses.setFooterText(stderrCliColors.gray('Press [?] to enable verbose logs'));
     }
 
     // Resolved Compose configuration

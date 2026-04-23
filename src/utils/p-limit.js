@@ -25,6 +25,8 @@ module.exports = (concurrency) => {
 
     try {
       await result;
+    } catch {
+      // The caller observes rejections through the resolved task promise.
     } finally {
       next();
     }

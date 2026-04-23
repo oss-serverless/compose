@@ -19,7 +19,7 @@ describe('test/unit/src/utils/serverless-utils/log-reporters/node/style.test.js'
     proxyquire
       .noCallThru()
       .load('../../../../../../../src/utils/serverless-utils/lib/log-reporters/node/style', {
-        d: (value) => value,
+        'd': (value) => value,
         'd/auto-bind': (value) => value,
         'ext/function/identity': (value) => value,
         '../../../../colors': {

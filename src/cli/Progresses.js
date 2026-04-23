@@ -7,7 +7,7 @@
  */
 
 const cliCursor = require('cli-cursor');
-const colors = require('./colors');
+const { stderrCliColors: colors } = require('./colors');
 const symbols = require('./symbols');
 const isUnicodeSupported = require('is-unicode-supported');
 const { stripVTControlCharacters: stripAnsi } = require('node:util');

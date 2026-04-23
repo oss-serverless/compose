@@ -5,7 +5,7 @@ const renderHelp = require('./render-help');
 const Context = require('./Context');
 const ComponentsService = require('./ComponentsService');
 const handleError = require('./handle-error');
-const colors = require('./cli/colors');
+const { stderrCliColors } = require('./cli/colors');
 const resolveConfigurationVariables = require('./configuration/resolve-variables');
 const resolveConfigurationPath = require('./configuration/resolve-path');
 const readConfiguration = require('./configuration/read');
@@ -102,7 +102,9 @@ const runComponents = async (argv = process.argv.slice(2)) => {
     // If at least one of the internal commands failed, we want to exit with error code 1
     if (Object.values(context.componentCommandsOutcomes).includes('failure')) {
       context.output.log();
-      context.output.log(colors.gray('Verbose logs are available in ".serverless/compose.log"'));
+      context.output.log(
+        stderrCliColors.gray('Verbose logs are available in ".serverless/compose.log"')
+      );
       process.exit(1);
     } else {
       process.exit(0);

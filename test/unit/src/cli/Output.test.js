@@ -1,6 +1,7 @@
 'use strict';
 
 const expect = require('chai').expect;
+const proxyquire = require('proxyquire');
 const Output = require('../../../../src/cli/Output');
 const colors = require('../../../../src/cli/colors');
 const readStream = require('../../read-stream');
@@ -18,6 +19,36 @@ describe('test/unit/lib/cli/Output.test.js', () => {
     expect(await readStream(output.stdout)).to.equal('Message\n');
     expect(await readStream(output.stderr)).to.equal('');
     expect(await readStream(output.logsFileStream)).to.equal('Message\n');
+  });
+
+  it('uses stream-specific palettes for stdout and stderr output', async () => {
+    const OutputWithStubbedColors = proxyquire.noCallThru().load('../../../../src/cli/Output', {
+      './colors': {
+        stdoutCliColors: {
+          gray: (value) => `stdout-gray(${value})`,
+        },
+        stderrCliColors: {
+          gray: (value) => `stderr-gray(${value})`,
+          red: (value) => `stderr-red(${value})`,
+        },
+      },
+    });
+    const localOutput = new OutputWithStubbedColors(true, true);
+
+    localOutput.writeText('Message', ['service']);
+    localOutput.log('Problem', ['service']);
+    localOutput.verbose('Debug', ['service']);
+    localOutput.error('Boom', ['service']);
+
+    expect(await readStream(localOutput.stdout)).to.equal('stdout-gray(service › )Message\n');
+    expect(await readStream(localOutput.stderr)).to.equal(
+      [
+        'stderr-gray(service › )Problem',
+        'stderr-gray(service › )stderr-gray(Debug)',
+        'stderr-gray(service › )stderr-red(Error:) Boom',
+        '',
+      ].join('\n')
+    );
   });
 
   it('can namespace text', async () => {
