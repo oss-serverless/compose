@@ -5,6 +5,7 @@ const pLimit = require('../utils/p-limit');
 const streamToString = require('../utils/stream-to-string');
 const ServerlessError = require('../serverless-error');
 const BaseStateStorage = require('./BaseStateStorage');
+const normalizeState = require('./normalize-state');
 
 class S3StateStorage extends BaseStateStorage {
   constructor(config = {}) {
@@ -33,10 +34,10 @@ class S3StateStorage extends BaseStateStorage {
           Key: this.stateKey,
         });
         const readState = await streamToString(stateObjectFromS3.Body);
-        this.state = JSON.parse(readState);
+        this.state = normalizeState(JSON.parse(readState));
       } catch (e) {
         if (e.Code === 'NoSuchKey') {
-          this.state = {};
+          this.state = normalizeState({});
         } else {
           throw new ServerlessError(
             `Could not read state from remote S3 bucket: ${e.message}`,

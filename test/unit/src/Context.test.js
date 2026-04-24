@@ -4,6 +4,7 @@ const expect = require('chai').expect;
 const { stripVTControlCharacters: stripAnsi } = require('node:util');
 
 const Context = require('../../../src/Context');
+const { createRegistry } = require('../../../src/utils/safe-object');
 const readStream = require('../read-stream');
 
 describe('test/unit/src/Context.test.js', () => {
@@ -28,6 +29,16 @@ describe('test/unit/src/Context.test.js', () => {
     const context = createContext();
 
     context.renderOutputs({ value: 1 });
+
+    expect(stripAnsi(await readStream(context.output.stdout))).to.equal('value: 1\n');
+  });
+
+  it('renders null-prototype output maps', async () => {
+    const context = createContext();
+    const outputs = createRegistry();
+    outputs.value = 1;
+
+    context.renderOutputs(outputs);
 
     expect(stripAnsi(await readStream(context.output.stdout))).to.equal('value: 1\n');
   });

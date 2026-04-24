@@ -11,6 +11,7 @@ const { stderrCliColors: colors } = require('./colors');
 const symbols = require('./symbols');
 const isUnicodeSupported = require('is-unicode-supported');
 const { stripVTControlCharacters: stripAnsi } = require('node:util');
+const { createRegistry, hasOwn } = require('../utils/safe-object');
 
 const dots = {
   frames: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
@@ -40,7 +41,7 @@ class Progresses {
       spinner: isUnicodeSupported() ? dots : dashes,
     };
     /** @type {Record<string, Progress>} */
-    this.progresses = {};
+    this.progresses = createRegistry();
     this.isCursorHidden = false;
     this.currentInterval = null;
     this.output = output;
@@ -86,14 +87,14 @@ class Progresses {
    * @param {string} name
    */
   exists(name) {
-    return this.progresses[name];
+    return hasOwn(this.progresses, name) ? this.progresses[name] : undefined;
   }
 
   /**
    * @param {string} name
    */
   isWaiting(name) {
-    return this.progresses[name] && this.progresses[name].status === 'waiting';
+    return hasOwn(this.progresses, name) && this.progresses[name].status === 'waiting';
   }
 
   /**
@@ -101,7 +102,7 @@ class Progresses {
    * @param {string} text
    */
   update(name, text) {
-    if (!this.progresses[name]) throw Error(`No progress with name ${name}`);
+    if (!hasOwn(this.progresses, name)) throw Error(`No progress with name ${name}`);
     this.progresses[name].text = text;
     this.updateSpinnerState(name);
   }
@@ -111,7 +112,7 @@ class Progresses {
    * @param {string} [text]
    */
   success(name, text) {
-    if (!this.progresses[name]) throw Error(`No progress with name ${name}`);
+    if (!hasOwn(this.progresses, name)) throw Error(`No progress with name ${name}`);
     this.progresses[name].status = 'success';
     if (text) {
       this.progresses[name].text = text;
@@ -127,7 +128,7 @@ class Progresses {
   error(name, error) {
     const errorMessage = error instanceof Error ? error.message : error;
 
-    if (!this.progresses[name]) throw Error(`No progress with name ${name}`);
+    if (!hasOwn(this.progresses, name)) throw Error(`No progress with name ${name}`);
     this.progresses[name].status = 'error';
     this.progresses[name].text = 'error';
     this.progresses[name].endTime = Date.now();
@@ -143,7 +144,7 @@ class Progresses {
    * @param {string} name
    */
   skipped(name) {
-    if (!this.progresses[name]) throw Error(`No progress with name ${name}`);
+    if (!hasOwn(this.progresses, name)) throw Error(`No progress with name ${name}`);
     this.progresses[name].status = 'skipped';
     this.progresses[name].text = 'skipped';
     this.progresses[name].endTime = Date.now();
@@ -167,12 +168,12 @@ class Progresses {
       this.isCursorHidden = false;
       cliCursor.show();
     }
-    this.progresses = {};
+    this.progresses = createRegistry();
   }
 
   updateSpinnerState(progressName) {
     // Log the contents of the progress that initiated state update to verbose
-    if (this.progresses[progressName]) {
+    if (hasOwn(this.progresses, progressName)) {
       const progress = this.progresses[progressName];
       let logMessage = progress.text;
       if (progress.content) {

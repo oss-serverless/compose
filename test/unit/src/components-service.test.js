@@ -61,6 +61,7 @@ describe('test/unit/src/components-service.test.js', () => {
   });
 
   it('has properly resolved components', () => {
+    expect(Object.getPrototypeOf(componentsService.allComponents)).to.equal(null);
     expect(componentsService.allComponents).to.deep.equal({
       anotherservice: {
         dependencies: ['consumer'],
@@ -91,6 +92,33 @@ describe('test/unit/src/components-service.test.js', () => {
         path: frameworkComponentPath,
       },
     });
+  });
+
+  it('does not treat inherited object keys as internal components', async () => {
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+
+    const localComponentsService = new ComponentsService(
+      context,
+      {
+        services: {
+          resources: {
+            component: 'constructor',
+            path: 'resources',
+          },
+        },
+      },
+      {}
+    );
+
+    await localComponentsService.init();
+
+    expect(localComponentsService.allComponents.resources.path).to.equal('constructor');
   });
 
   it('has properly resolved components graph', () => {
@@ -164,6 +192,159 @@ describe('test/unit/src/components-service.test.js', () => {
       'code',
       'CIRCULAR_GRAPH_DEPENDENCIES'
     );
+  });
+
+  it('rejects inherited dependency names that are not real services', async () => {
+    const configuration = {
+      services: {
+        foundation: {
+          component: '@foo/foundation',
+          path: 'foundation',
+          dependsOn: 'constructor',
+        },
+      },
+    };
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+
+    const localComponentsService = new ComponentsService(context, configuration, {});
+
+    await expect(localComponentsService.init()).to.eventually.be.rejected.and.have.property(
+      'code',
+      'REFERENCED_COMPONENT_DOES_NOT_EXIST'
+    );
+  });
+
+  it('rejects reserved service aliases during initialization', async () => {
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+
+    const localComponentsService = new ComponentsService(
+      context,
+      {
+        services: {
+          constructor: {
+            path: 'resources',
+          },
+        },
+      },
+      {}
+    );
+
+    await expect(localComponentsService.init()).to.eventually.be.rejected.and.have.property(
+      'code',
+      'INVALID_SERVICE_ALIAS'
+    );
+  });
+
+  it('does not resolve inherited output paths from prototypes', async () => {
+    const loadComponent = sinon.stub().callsFake(async ({ alias, inputs }) => ({
+      inputs,
+      async deploy() {
+        return undefined;
+      },
+      commands: {},
+      alias,
+    }));
+    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
+      './load': { loadComponent },
+    });
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+    context.stateStorage.readComponentsOutputs = async () => ({
+      foundation: {
+        endpoint: 'https://example.com',
+      },
+    });
+
+    const configuration = {
+      services: {
+        foundation: {
+          component: '@foo/foundation',
+          path: 'foundation',
+        },
+        api: {
+          component: '@foo/api',
+          path: 'api',
+          dependsOn: 'foundation',
+          params: {
+            inherited: '${foundation.constructor.name}',
+          },
+        },
+      },
+    };
+
+    const localComponentsService = new ComponentsServiceWithStubbedLoad(context, configuration, {});
+    await localComponentsService.init();
+
+    await expect(localComponentsService.deploy()).to.eventually.be.rejected.and.have.property(
+      'code',
+      'REFERENCED_OUTPUT_DOES_NOT_EXIST'
+    );
+  });
+
+  it('resolves own array output properties like length', async () => {
+    const loadComponent = sinon.stub().callsFake(async ({ alias, inputs }) => ({
+      inputs,
+      async deploy() {
+        return undefined;
+      },
+      commands: {},
+      alias,
+    }));
+    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
+      './load': { loadComponent },
+    });
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+    context.stateStorage.readComponentsOutputs = async () => ({
+      foundation: {
+        items: ['one', 'two', 'three'],
+      },
+    });
+
+    const configuration = {
+      services: {
+        foundation: {
+          component: '@foo/foundation',
+          path: 'foundation',
+        },
+        api: {
+          component: '@foo/api',
+          path: 'api',
+          dependsOn: 'foundation',
+          params: {
+            count: '${foundation.items.length}',
+          },
+        },
+      },
+    };
+
+    const localComponentsService = new ComponentsServiceWithStubbedLoad(context, configuration, {});
+    await localComponentsService.init();
+    await localComponentsService.deploy();
+
+    expect(loadComponent.secondCall.args[0].inputs.params.count).to.equal(3);
   });
 
   it('deploys dependencies before dependents', async () => {
@@ -527,5 +708,172 @@ describe('test/unit/src/components-service.test.js', () => {
     expect(stripAnsi(await readStream(context.output.stdout))).to.equal(
       ['somethingelse: 123', ''].join('\n')
     );
+  });
+
+  it('rejects reserved component aliases in direct command invocation', async () => {
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+    const localComponentsService = new ComponentsService(context, { services: {} }, {});
+
+    await expect(
+      localComponentsService.invokeComponentCommand('__proto__', 'outputs', {})
+    ).to.eventually.be.rejected.and.have.property('code', 'INVALID_SERVICE_ALIAS');
+  });
+
+  it('rejects inherited Object prototype command names', async () => {
+    const loadComponent = sinon.stub().resolves({
+      commands: {},
+    });
+    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
+      './load': { loadComponent },
+    });
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+
+    const localComponentsService = new ComponentsServiceWithStubbedLoad(
+      context,
+      {
+        services: {
+          foundation: {
+            component: '@foo/foundation',
+            path: 'foundation',
+          },
+        },
+      },
+      {}
+    );
+    await localComponentsService.init();
+
+    await expect(
+      localComponentsService.invokeComponentCommand('foundation', 'toString', {})
+    ).to.eventually.be.rejected.and.have.property('code', 'COMPONENT_COMMAND_NOT_FOUND');
+  });
+
+  it('does not invoke inherited custom commands', async () => {
+    const inheritedHandler = sinon.spy();
+    const loadComponent = sinon.stub().resolves({
+      commands: Object.create({
+        inherited: {
+          handler: inheritedHandler,
+        },
+      }),
+    });
+    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
+      './load': { loadComponent },
+    });
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+
+    const localComponentsService = new ComponentsServiceWithStubbedLoad(
+      context,
+      {
+        services: {
+          foundation: {
+            component: '@foo/foundation',
+            path: 'foundation',
+          },
+        },
+      },
+      {}
+    );
+    await localComponentsService.init();
+
+    await expect(
+      localComponentsService.invokeComponentCommand('foundation', 'inherited', {})
+    ).to.eventually.be.rejected.and.have.property('code', 'COMPONENT_COMMAND_NOT_FOUND');
+    expect(inheritedHandler.called).to.equal(false);
+  });
+
+  it('rejects custom commands without callable handlers', async () => {
+    const loadComponent = sinon.stub().resolves({
+      commands: {
+        broken: {
+          handler: 'not-a-function',
+        },
+      },
+    });
+    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
+      './load': { loadComponent },
+    });
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+
+    const localComponentsService = new ComponentsServiceWithStubbedLoad(
+      context,
+      {
+        services: {
+          foundation: {
+            component: '@foo/foundation',
+            path: 'foundation',
+          },
+        },
+      },
+      {}
+    );
+    await localComponentsService.init();
+
+    await expect(
+      localComponentsService.invokeComponentCommand('foundation', 'broken', {})
+    ).to.eventually.be.rejected.and.have.property('code', 'COMPONENT_COMMAND_NOT_FOUND');
+  });
+
+  it('supports default commands implemented on component prototypes', async () => {
+    const deploy = sinon.stub().resolves();
+
+    class FakeComponent {
+      async deploy(options) {
+        return deploy(options);
+      }
+    }
+
+    const loadComponent = sinon.stub().resolves(new FakeComponent());
+    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
+      './load': { loadComponent },
+    });
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+
+    const localComponentsService = new ComponentsServiceWithStubbedLoad(
+      context,
+      {
+        services: {
+          foundation: {
+            component: '@foo/foundation',
+            path: 'foundation',
+          },
+        },
+      },
+      {}
+    );
+    await localComponentsService.init();
+    await localComponentsService.invokeComponentCommand('foundation', 'deploy', { force: true });
+
+    expect(deploy.calledOnceWithExactly({ force: true })).to.equal(true);
+    expect(context.componentCommandsOutcomes.foundation).to.equal('success');
   });
 });

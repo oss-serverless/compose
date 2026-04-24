@@ -131,4 +131,18 @@ describe('test/unit/src/configuration/read.test.js', () => {
       'INVALID_COMPOSE_CONFIGURATION_STRUCTURE'
     );
   });
+
+  it('preserves nested own unsafe keys as data when reading configuration', async () => {
+    configurationPath = 'serverless-compose-unsafe.json';
+    await fsp.writeFile(
+      configurationPath,
+      '{"services":{"resources":{"path":"resources","params":{"__proto__":{"value":"ok"}}}}}'
+    );
+
+    const configuration = await readConfiguration(configurationPath);
+
+    expect(
+      Object.getOwnPropertyDescriptor(configuration.services.resources.params, '__proto__').value
+    ).to.deep.equal({ value: 'ok' });
+  });
 });
