@@ -15,6 +15,12 @@ describe('test/unit/src/configuration/validate.test.js', () => {
       .and.have.property('code', 'INVALID_NON_OBJECT_CONFIGURATION');
   });
 
+  it('rejects null config', () => {
+    expect(() => validateConfiguration(null, configurationPath))
+      .to.throw()
+      .and.have.property('code', 'INVALID_NON_OBJECT_CONFIGURATION');
+  });
+
   it('rejects non-object "services" in config', () => {
     expect(() => validateConfiguration({ services: 'string' }, configurationPath))
       .to.throw()

@@ -8,7 +8,7 @@ const { RESERVED_COMPONENT_IDS, hasOwn, isReservedComponentId } = require('../ut
 
 function validateConfiguration(configuration, configurationPath) {
   const configurationFilename = path.basename(configurationPath);
-  if (typeof configuration !== 'object') {
+  if (configuration == null || typeof configuration !== 'object') {
     throw new ServerlessError(
       `Resolved "${configurationFilename}" does not contain valid Compose configuration.\n` +
         'Read about Serverless Framework Compose in the documentation: https://slss.io/docs-compose',
