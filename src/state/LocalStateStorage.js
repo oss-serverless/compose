@@ -4,6 +4,7 @@ const BaseStateStorage = require('./BaseStateStorage');
 const utils = require('../utils/fs');
 const path = require('path');
 const fsp = require('fs').promises;
+const normalizeState = require('./normalize-state');
 
 class LocalStateStorage extends BaseStateStorage {
   constructor(root, stage) {
@@ -19,9 +20,9 @@ class LocalStateStorage extends BaseStateStorage {
     if (this.state === undefined) {
       const stateFilePath = path.join(this.stateRoot, `state.${this.stage}.json`);
       if (await utils.fileExists(stateFilePath)) {
-        this.state = await utils.readFile(stateFilePath);
+        this.state = normalizeState(await utils.readFile(stateFilePath));
       } else {
-        this.state = {};
+        this.state = normalizeState({});
       }
     }
     return this.state;

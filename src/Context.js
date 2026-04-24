@@ -12,6 +12,7 @@ const formatOutput = require('./cli/format-output');
 const Progresses = require('./cli/Progresses');
 const { stderrCliColors } = require('./cli/colors');
 const ServerlessError = require('./serverless-error');
+const { createRegistry } = require('./utils/safe-object');
 
 class Context {
   constructor(config) {
@@ -21,7 +22,7 @@ class Context {
     /** @type {string} */
     this.stage = config.stage;
     this.id = undefined;
-    this.componentCommandsOutcomes = {};
+    this.componentCommandsOutcomes = createRegistry();
     this.hasEnabledVerboseInteractively = false;
 
     this.progresses = new Progresses(this.output);

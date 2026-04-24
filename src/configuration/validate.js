@@ -4,6 +4,7 @@ const path = require('path');
 const ServerlessError = require('../serverless-error');
 const isObject = require('type/object/is');
 const { default: Ajv } = require('ajv');
+const { RESERVED_COMPONENT_IDS, hasOwn, isReservedComponentId } = require('../utils/safe-object');
 
 function validateConfiguration(configuration, configurationPath) {
   const configurationFilename = path.basename(configurationPath);
@@ -15,7 +16,7 @@ function validateConfiguration(configuration, configurationPath) {
     );
   }
 
-  if (!isObject(configuration.services)) {
+  if (!hasOwn(configuration, 'services') || !isObject(configuration.services)) {
     throw new ServerlessError(
       `Invalid configuration: "${configurationFilename}" must contain "services" property.\n` +
         'Read about Serverless Framework Compose configuration in the documentation: https://slss.io/docs-compose',
@@ -24,6 +25,13 @@ function validateConfiguration(configuration, configurationPath) {
   }
 
   Object.entries(configuration.services).forEach(([key, value]) => {
+    if (isReservedComponentId(key)) {
+      throw new ServerlessError(
+        `Invalid configuration: definition of "${key}" service uses a reserved alias. ` +
+          `Reserved aliases: ${Array.from(RESERVED_COMPONENT_IDS).join(', ')}.`,
+        'INVALID_SERVICE_ALIAS'
+      );
+    }
     if (!isObject(value)) {
       throw new ServerlessError(
         `Invalid configuration: definition of "${key}" service must be an object.\n` +
@@ -47,7 +55,7 @@ function validateConfiguration(configuration, configurationPath) {
     'custom',
   ];
   frameworkConfigKeys.forEach((key) => {
-    if (key in configuration) {
+    if (hasOwn(configuration, key)) {
       throw new ServerlessError(
         `Invalid property "${key}" in "${configurationFilename}".\n` +
           'This is a Serverless Framework option (serverless.yml) that is not supported in serverless-compose.yml.\n' +

@@ -36,10 +36,47 @@ describe('test/unit/src/state/S3StateStorage.test.js', () => {
     s3StateStorage.s3Client = mockedS3Client;
     const result = await s3StateStorage.readState();
     expect(result).to.deep.equal({ components: { resources: { state: {} } } });
+    expect(Object.getPrototypeOf(result.components)).to.equal(null);
     expect(mockedS3Client.getObject).to.have.been.calledOnceWithExactly({
       Bucket: bucketName,
       Key: stateKey,
     });
+  });
+
+  it('normalizes reserved component ids from remote state while preserving nested payload data', async () => {
+    const s3StateStorage = new S3StateStorage({ bucketName, stateKey });
+    const mockedS3Client = {
+      getObject: sinon.stub().resolves({
+        Body: stream.Readable.from([
+          Buffer.from(
+            JSON.stringify({
+              components: {
+                __proto__: {
+                  outputs: { hidden: true },
+                },
+                constructor: {
+                  outputs: { hidden: true },
+                },
+                prototype: {
+                  outputs: { hidden: true },
+                },
+                resources: {
+                  outputs: JSON.parse('{"__proto__":{"value":"ok"}}'),
+                },
+              },
+            })
+          ),
+        ]),
+      }),
+    };
+    s3StateStorage.s3Client = mockedS3Client;
+
+    const result = await s3StateStorage.readState();
+
+    expect(Object.keys(result.components)).to.deep.equal(['resources']);
+    expect(
+      Object.getOwnPropertyDescriptor(result.components.resources.outputs, '__proto__').value
+    ).to.deep.equal({ value: 'ok' });
   });
 
   it('gracefully handles situation where state file in S3 is not present', async () => {

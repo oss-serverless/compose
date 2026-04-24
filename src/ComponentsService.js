@@ -1,19 +1,25 @@
 'use strict';
 
 const { resolve } = require('path');
-const { isEmpty, path } = require('ramda');
+const { isEmpty } = require('ramda');
 const { Graph, alg } = require('@dagrejs/graphlib');
 const traverse = require('traverse');
 const pLimit = require('./utils/p-limit');
 const ServerlessError = require('./serverless-error');
+const {
+  createRegistry,
+  getOwnByPath,
+  hasOwn,
+  isReservedComponentId,
+} = require('./utils/safe-object');
 const utils = require('./utils');
 const { loadComponent } = require('./load');
 const colors = require('./cli/colors');
 const ServerlessFramework = require('../components/framework');
 
-const INTERNAL_COMPONENTS = {
+const INTERNAL_COMPONENTS = Object.assign(createRegistry(), {
   'serverless-framework': resolve(__dirname, '../components/framework'),
-};
+});
 
 const formatError = (e) => {
   let formattedError = e instanceof Error ? e.message : e;
@@ -34,7 +40,7 @@ const resolveObject = (object, context, method) => {
     let newValue = value;
     for (const match of matches) {
       const referencedPropertyPath = match.substring(2, match.length - 1).split('.');
-      const referencedPropertyValue = path(referencedPropertyPath, context);
+      const referencedPropertyValue = getOwnByPath(context, referencedPropertyPath);
 
       if (referencedPropertyValue === undefined) {
         let errMsg = `The variable "${match}" cannot be resolved: the referenced output does not exist.`;
@@ -80,9 +86,16 @@ const validateGraph = (graph) => {
 };
 
 const getAllComponents = async (obj = {}, root = process.cwd()) => {
-  const allComponents = {};
+  const allComponents = createRegistry();
 
   for (const [key, val] of Object.entries(obj.services)) {
+    if (isReservedComponentId(key)) {
+      throw new ServerlessError(
+        `Service alias "${key}" is reserved and cannot be used.`,
+        'INVALID_SERVICE_ALIAS'
+      );
+    }
+
     // By default assume `serverless-framework` component
     if (!val.component) {
       val.component = 'serverless-framework';
@@ -101,7 +114,7 @@ const getAllComponents = async (obj = {}, root = process.cwd()) => {
         path: localComponentPath,
         inputs: val,
       };
-    } else if (val.component in INTERNAL_COMPONENTS) {
+    } else if (hasOwn(INTERNAL_COMPONENTS, val.component)) {
       // Internal component
       allComponents[key] = {
         path: INTERNAL_COMPONENTS[val.component],
@@ -157,7 +170,7 @@ const setDependencies = (allComponents) => {
         for (const match of matches) {
           const referencedComponent = match.substring(2, match.length - 1).split('.')[0];
 
-          if (!allComponents[referencedComponent]) {
+          if (!hasOwn(allComponents, referencedComponent)) {
             throw new ServerlessError(
               `The service "${referencedComponent}" does not exist. It is referenced by "${alias}" in expression "${match}".`,
               'REFERENCED_COMPONENT_DOES_NOT_EXIST'
@@ -173,7 +186,7 @@ const setDependencies = (allComponents) => {
 
     if (typeof allComponents[alias].inputs.dependsOn === 'string') {
       const explicitDependency = allComponents[alias].inputs.dependsOn;
-      if (!allComponents[explicitDependency]) {
+      if (!hasOwn(allComponents, explicitDependency)) {
         throw new ServerlessError(
           `The service "${explicitDependency}" referenced in "dependsOn" of "${alias}" does not exist`,
           'REFERENCED_COMPONENT_DOES_NOT_EXIST'
@@ -183,7 +196,7 @@ const setDependencies = (allComponents) => {
     } else {
       const explicitDependencies = allComponents[alias].inputs.dependsOn || [];
       for (const explicitDependency of explicitDependencies) {
-        if (!allComponents[explicitDependency]) {
+        if (!hasOwn(allComponents, explicitDependency)) {
           throw new ServerlessError(
             `The service "${explicitDependency}" referenced in "dependsOn" of "${alias}" does not exist`,
             'REFERENCED_COMPONENT_DOES_NOT_EXIST'
@@ -382,6 +395,13 @@ class ComponentsService {
   }
 
   async invokeComponentCommand(componentName, command, options) {
+    if (isReservedComponentId(componentName)) {
+      throw new ServerlessError(
+        `Service alias "${componentName}" is reserved and cannot be used.`,
+        'INVALID_SERVICE_ALIAS'
+      );
+    }
+
     // We can have commands that do not have to call commands directly on the component,
     // but are global commands that can accept the componentName parameter
     // to filter out data
@@ -394,6 +414,7 @@ class ComponentsService {
 
       const component =
         this.allComponents &&
+        hasOwn(this.allComponents, componentName) &&
         this.allComponents[componentName] &&
         this.allComponents[componentName].instance;
       if (component === undefined) {
@@ -402,32 +423,39 @@ class ComponentsService {
       this.context.logVerbose(`Invoking "${command}" on service "${componentName}"`);
 
       const isDefaultCommand = ['deploy', 'remove', 'logs', 'info', 'package'].includes(command);
+      const hasCustomCommand =
+        component && component.commands && hasOwn(component.commands, command);
 
       if (isDefaultCommand) {
         // Default command defined for all components (deploy, logs, dev, etc.)
-        if (!component || !component[command]) {
+        if (!component || typeof component[command] !== 'function') {
           throw new ServerlessError(
             `No method "${command}" on service "${componentName}"`,
             'COMPONENT_COMMAND_NOT_FOUND'
           );
         }
         handler = (opts) => component[command](opts);
-      } else if (
-        (!component || !component.commands || !component.commands[command]) &&
-        component instanceof ServerlessFramework
-      ) {
+      } else if (!hasCustomCommand && component instanceof ServerlessFramework) {
         // Workaround to invoke all custom Framework commands
         // TODO: Support options and validation
         handler = (opts) => component.command(command, opts);
       } else {
         // Custom command: the handler is defined in the component's `commands` property
-        if (!component || !component.commands || !component.commands[command]) {
+        if (!hasCustomCommand) {
           throw new ServerlessError(
             `No command "${command}" on service ${componentName}`,
             'COMPONENT_COMMAND_NOT_FOUND'
           );
         }
         const commandHandler = component.commands[command].handler;
+
+        if (typeof commandHandler !== 'function') {
+          throw new ServerlessError(
+            `No command "${command}" on service ${componentName}`,
+            'COMPONENT_COMMAND_NOT_FOUND'
+          );
+        }
+
         handler = (opts) => commandHandler.call(component, opts);
       }
     }

@@ -27,6 +27,12 @@ describe('test/unit/src/configuration/validate.test.js', () => {
       .and.have.property('code', 'INVALID_NON_OBJECT_SERVICES_CONFIGURATION');
   });
 
+  it('does not treat inherited services as valid configuration', () => {
+    expect(() => validateConfiguration(Object.create({ services: {} }), configurationPath))
+      .to.throw()
+      .and.have.property('code', 'INVALID_NON_OBJECT_SERVICES_CONFIGURATION');
+  });
+
   it('rejects non-object configuration of specific services', () => {
     expect(() =>
       validateConfiguration(
@@ -56,6 +62,13 @@ describe('test/unit/src/configuration/validate.test.js', () => {
       .and.have.property('code', 'INVALID_CONFIGURATION');
   });
 
+  it('ignores inherited Framework-specific properties', () => {
+    const configuration = Object.create({ provider: {} });
+    configuration.services = {};
+
+    expect(() => validateConfiguration(configuration, configurationPath)).not.to.throw();
+  });
+
   it('rejects configuration with unknown properties', () => {
     expect(() =>
       validateConfiguration(
@@ -80,6 +93,30 @@ describe('test/unit/src/configuration/validate.test.js', () => {
         configurationPath
       )
     ).not.to.throw();
+  });
+
+  it('rejects reserved service aliases', () => {
+    const reservedConfigurations = [
+      {
+        services: JSON.parse('{"__proto__":{"path":"resources"}}'),
+      },
+      {
+        services: {
+          constructor: { path: 'resources' },
+        },
+      },
+      {
+        services: {
+          prototype: { path: 'resources' },
+        },
+      },
+    ];
+
+    reservedConfigurations.forEach((configuration) => {
+      expect(() => validateConfiguration(configuration, configurationPath))
+        .to.throw()
+        .and.have.property('code', 'INVALID_SERVICE_ALIAS');
+    });
   });
 
   it('rejects invalid component inputs', () => {
