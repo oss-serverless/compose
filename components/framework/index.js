@@ -15,6 +15,19 @@ const MINIMAL_FRAMEWORK_VERSION = '3.7.7';
 const doesSatisfyRequiredFrameworkVersion = (version) =>
   semver.gte(version, MINIMAL_FRAMEWORK_VERSION);
 
+const formatCliParam = (key, value) => {
+  if (value === true) {
+    // Support flags like `--verbose`
+    return [`--${key}`];
+  }
+  if (key.length === 1) {
+    // To handle shorthand notation like
+    // deploy -f function
+    return [`-${key}`, value];
+  }
+  return [`--${key}=${value}`];
+};
+
 class ServerlessFramework {
   /**
    * @param {string} id
@@ -51,16 +64,8 @@ class ServerlessFramework {
     const cliparams = Object.entries(options)
       .filter(([key]) => key !== 'stage')
       .flatMap(([key, value]) => {
-        if (value === true) {
-          // Support flags like `--verbose`
-          return `--${key}`;
-        }
-        if (key.length === 1) {
-          // To handle shorthand notation like
-          // deploy -f function
-          return [`-${key}`, value];
-        }
-        return `--${key}=${value}`;
+        const values = Array.isArray(value) ? value : [value];
+        return values.flatMap((singleValue) => formatCliParam(key, singleValue));
       });
     const args = [...command.split(':'), ...cliparams];
     return await this.exec('serverless', args, true);

@@ -52,6 +52,10 @@ module.exports = async () => {
   output.writeText(colors.gray('or the shortcut:'));
   output.writeText('serverless <service-name>:<command> <options>');
   output.writeText();
+  output.writeText(colors.gray('Examples'));
+  output.writeText('serverless deploy function --service=service-a --function=handler');
+  output.writeText('serverless service-a:invoke:local --function=handler');
+  output.writeText();
   output.writeText(colors.gray('Global options'));
   output.writeText(formatLine('--verbose', 'Enable verbose logs'));
   output.writeText(formatLine('--stage', 'Stage of the service'));

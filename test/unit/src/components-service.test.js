@@ -837,6 +837,75 @@ describe('test/unit/src/components-service.test.js', () => {
     ).to.eventually.be.rejected.and.have.property('code', 'COMPONENT_COMMAND_NOT_FOUND');
   });
 
+  it('passes nested commands through for Serverless Framework services', async () => {
+    const command = sinon.stub().resolves();
+
+    class FakeServerlessFramework {
+      async command(commandName, options) {
+        return command(commandName, options);
+      }
+    }
+
+    const loadComponent = sinon.stub().resolves(new FakeServerlessFramework());
+    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
+      './load': { loadComponent },
+      '../components/framework': FakeServerlessFramework,
+    });
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+
+    const localComponentsService = new ComponentsServiceWithStubbedLoad(
+      context,
+      {
+        services: {
+          api: {
+            path: 'api',
+          },
+        },
+      },
+      {}
+    );
+    await localComponentsService.init();
+
+    const cases = [
+      {
+        command: 'deploy:function',
+        options: { function: 'handler' },
+      },
+      {
+        command: 'deploy:list:functions',
+        options: {},
+      },
+      {
+        command: 'rollback:function',
+        options: { 'function': 'handler', 'function-version': '23' },
+      },
+      {
+        command: 'invoke:local',
+        options: { function: 'handler' },
+      },
+    ];
+
+    for (const testCase of cases) {
+      await localComponentsService.invokeComponentCommand(
+        'api',
+        testCase.command,
+        testCase.options
+      );
+    }
+
+    expect(command).to.have.callCount(cases.length);
+    cases.forEach((testCase, index) => {
+      expect(command.getCall(index).args).to.deep.equal([testCase.command, testCase.options]);
+    });
+    expect(context.componentCommandsOutcomes.api).to.equal('success');
+  });
+
   it('supports default commands implemented on component prototypes', async () => {
     const deploy = sinon.stub().resolves();
 
