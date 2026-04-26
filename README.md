@@ -1,6 +1,6 @@
 This repository contains the code for Serverless Framework Compose.
 
-Requires Node.js `^20.19.0 || >=22.12.0`.
+Requires Node.js `^20.19.0 || ^22.13.0 || >=24`.
 
 There is no standalone binary version, the package is only available via NPM.
 

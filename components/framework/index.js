@@ -221,7 +221,8 @@ class ServerlessFramework {
         stdoutResult = stdoutBuffer.toString();
       } catch (e) {
         throw new Error(
-          'Could not find the Serverless Framework CLI installation. Ensure Serverless Framework is installed before continuing.\nhttps://github.com/oss-serverless/serverless'
+          'Could not find the Serverless Framework CLI installation. Ensure Serverless Framework is installed before continuing.\nhttps://github.com/oss-serverless/serverless',
+          { cause: e }
         );
       }
       let matchResult = stdoutResult.match(/Framework Core: ([0-9]+\.[0-9]+\.[0-9]+)/);
