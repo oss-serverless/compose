@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # Required for OIDC
 
 jobs:
   prePublishPackageTest:
@@ -20,14 +21,14 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.npm
-          key: npm-no-lock-v1-${{ runner.os }}-node22-${{ hashFiles('package.json') }}
+          key: npm-no-lock-v1-${{ runner.os }}-node24-${{ hashFiles('package.json') }}
           restore-keys: |
-            npm-no-lock-v1-${{ runner.os }}-node22-
+            npm-no-lock-v1-${{ runner.os }}-node24-
 
       - name: Install Node.js and npm
         uses: actions/setup-node@v6
         with:
-          node-version: 22.x
+          node-version: 24.x
           package-manager-cache: false
           registry-url: https://registry.npmjs.org
 
@@ -74,13 +75,9 @@ jobs:
       - name: Install Node.js and npm
         uses: actions/setup-node@v6
         with:
-          node-version: 22.x
+          node-version: 24.x
           package-manager-cache: false
           registry-url: https://registry.npmjs.org
 
       - name: Publish new version
-        # Note: Setting NODE_AUTH_TOKEN as job|workspace wide env var won't work
-        #       as it appears actions/setup-node sets own value
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish ./*.tgz --access public --tag=latest
