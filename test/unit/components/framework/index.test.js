@@ -632,7 +632,7 @@ describe('test/unit/components/framework/index.test.js', () => {
     });
 
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'child-process-ext/spawn': spawnExtStub,
+      '../../src/utils/spawn': spawnExtStub,
     });
 
     const context = await getContext();
