@@ -15,6 +15,21 @@ const MINIMAL_FRAMEWORK_VERSION = '3.7.7';
 const doesSatisfyRequiredFrameworkVersion = (version) =>
   semver.gte(version, MINIMAL_FRAMEWORK_VERSION);
 
+const COMMAND_PROGRESS_TEXT = Object.freeze({
+  'deploy:function': ['deploying function', 'deployed function'],
+  'deploy:list': ['listing deployments', 'listed deployments'],
+  'deploy:list:functions': ['listing function deployments', 'listed function deployments'],
+  'rollback:function': ['rolling back function', 'rolled back function'],
+  'invoke': ['invoking function', 'invoked function'],
+  'invoke:local': ['invoking function locally', 'invoked function locally'],
+});
+
+const formatCommandProgressText = (text, options) => {
+  const functionName = options.function || options.f;
+  if (!functionName) return text;
+  return `${text} "${functionName}"`;
+};
+
 const formatCliParam = (key, value) => {
   if (value === true) {
     // Support flags like `--verbose`
@@ -61,6 +76,11 @@ class ServerlessFramework {
   // };
   // For now the workaround is to just pray that the command is correct and rely on validation from the Framework
   async command(command, options) {
+    const progressText = COMMAND_PROGRESS_TEXT[command];
+    if (progressText) {
+      this.context.startProgress(formatCommandProgressText(progressText[0], options));
+    }
+
     const cliparams = Object.entries(options)
       .filter(([key]) => key !== 'stage')
       .flatMap(([key, value]) => {
@@ -68,7 +88,13 @@ class ServerlessFramework {
         return values.flatMap((singleValue) => formatCliParam(key, singleValue));
       });
     const args = [...command.split(':'), ...cliparams];
-    return await this.exec('serverless', args, true);
+    const result = await this.exec('serverless', args, true);
+
+    if (progressText) {
+      this.context.successProgress(formatCommandProgressText(progressText[1], options));
+    }
+
+    return result;
   }
 
   async deploy() {

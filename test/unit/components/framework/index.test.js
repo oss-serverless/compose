@@ -499,6 +499,105 @@ describe('test/unit/components/framework/index.test.js', () => {
     ]);
   });
 
+  it('shows command-specific progress for selected passthrough commands', async () => {
+    const cases = [
+      {
+        command: 'deploy:function',
+        options: { function: 'handler' },
+        start: 'deploying function "handler"',
+        success: 'deployed function "handler"',
+      },
+      {
+        command: 'deploy:list',
+        options: {},
+        start: 'listing deployments',
+        success: 'listed deployments',
+      },
+      {
+        command: 'deploy:list:functions',
+        options: {},
+        start: 'listing function deployments',
+        success: 'listed function deployments',
+      },
+      {
+        command: 'rollback:function',
+        options: { 'function': 'handler', 'function-version': '23' },
+        start: 'rolling back function "handler"',
+        success: 'rolled back function "handler"',
+      },
+      {
+        command: 'invoke',
+        options: { function: 'handler' },
+        start: 'invoking function "handler"',
+        success: 'invoked function "handler"',
+      },
+      {
+        command: 'invoke',
+        options: { f: 'handler' },
+        start: 'invoking function "handler"',
+        success: 'invoked function "handler"',
+      },
+      {
+        command: 'invoke:local',
+        options: { function: 'handler' },
+        start: 'invoking function locally "handler"',
+        success: 'invoked function locally "handler"',
+      },
+    ];
+
+    for (const testCase of cases) {
+      const spawnStub = sinon.stub().returns({
+        on: (arg, cb) => {
+          if (arg === 'close') cb(0);
+        },
+        kill: () => {},
+      });
+      const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
+        'cross-spawn': spawnStub,
+      });
+
+      const context = await getContext();
+      sinon.spy(context, 'startProgress');
+      sinon.spy(context, 'successProgress');
+
+      const component = new FrameworkComponent('some-id', context, { path: 'path' });
+      context.state.detectedFrameworkVersion = '9.9.9';
+
+      await component.command(testCase.command, testCase.options);
+
+      expect(context.startProgress).to.have.been.calledOnceWithExactly(testCase.start);
+      expect(context.successProgress).to.have.been.calledOnceWithExactly(testCase.success);
+      expect(spawnStub.getCall(0).args[2].stdio).to.equal('inherit');
+    }
+  });
+
+  it('does not show special progress for unknown passthrough commands', async () => {
+    const spawnStub = sinon.stub().returns({
+      on: (arg, cb) => {
+        if (arg === 'close') cb(0);
+      },
+      kill: () => {},
+    });
+
+    const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
+      'cross-spawn': spawnStub,
+    });
+
+    const context = await getContext();
+    sinon.spy(context, 'startProgress');
+    sinon.spy(context, 'successProgress');
+
+    const component = new FrameworkComponent('some-id', context, { path: 'path' });
+    context.state.detectedFrameworkVersion = '9.9.9';
+
+    await component.command('print', {});
+
+    expect(context.startProgress.called).to.equal(false);
+    expect(context.successProgress.called).to.equal(false);
+    expect(spawnStub.getCall(0).args[1]).to.deep.equal(['print', '--stage', 'dev']);
+    expect(spawnStub.getCall(0).args[2].stdio).to.equal('inherit');
+  });
+
   it('correctly ignores `stage` from options to not duplicate it when executing command', async () => {
     const spawnStub = sinon.stub().returns({
       on: (arg, cb) => {
