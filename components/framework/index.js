@@ -1,11 +1,10 @@
 'use strict';
 
-const spawn = require('cross-spawn');
 const YAML = require('js-yaml');
 const hasha = require('hasha');
 const glob = require('../../src/utils/glob');
 const path = require('path');
-const spawnExt = require('child-process-ext/spawn');
+const spawn = require('../../src/utils/spawn');
 const semver = require('semver');
 const { configSchema } = require('./configuration');
 const ServerlessError = require('../../src/serverless-error');
@@ -217,7 +216,7 @@ class ServerlessFramework {
     ) {
       let stdoutResult;
       try {
-        const { stdoutBuffer } = await spawnExt('serverless', ['--version']);
+        const { stdoutBuffer } = await spawn('serverless', ['--version']);
         stdoutResult = stdoutBuffer.toString();
       } catch (e) {
         throw new Error(
@@ -271,11 +270,16 @@ class ServerlessFramework {
 
     this.context.logVerbose(`Running "${command} ${args.join(' ')}"`);
     return new Promise((resolve, reject) => {
-      const child = spawn(command, args, {
+      const subprocess = spawn(command, args, {
         cwd: this.inputs.path,
         stdio: streamStdout ? 'inherit' : undefined,
         env: { ...process.env, SLS_DISABLE_AUTO_UPDATE: '1', SLS_COMPOSE: '1' },
       });
+      const child = subprocess.child || subprocess;
+
+      if (typeof subprocess.catch === 'function') {
+        subprocess.catch(() => {});
+      }
 
       // Make sure that when our process is killed, we terminate the subprocess too
       const processExitCallback = () => {
