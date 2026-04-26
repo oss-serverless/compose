@@ -36,7 +36,7 @@
     "ajv": "^8.11.0",
     "cli-cursor": "^3",
     "cli-progress-footer": "^2.3.2",
-    "cross-spawn": "^7.0.3",
+    "cross-spawn": "^7.0.6",
     "d": "^1.0.1",
     "event-emitter": "^0.3.5",
     "ext": "^1.7.0",

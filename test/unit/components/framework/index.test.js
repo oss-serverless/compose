@@ -46,7 +46,7 @@ describe('test/unit/components/framework/index.test.js', () => {
       kill: () => {},
     });
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -79,7 +79,7 @@ describe('test/unit/components/framework/index.test.js', () => {
       kill: () => {},
     });
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -109,7 +109,7 @@ describe('test/unit/components/framework/index.test.js', () => {
       kill: () => {},
     });
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -139,7 +139,7 @@ describe('test/unit/components/framework/index.test.js', () => {
       kill: () => {},
     });
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -179,7 +179,7 @@ describe('test/unit/components/framework/index.test.js', () => {
       kill: () => {},
     });
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -219,7 +219,7 @@ describe('test/unit/components/framework/index.test.js', () => {
       kill: () => {},
     });
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -253,7 +253,7 @@ describe('test/unit/components/framework/index.test.js', () => {
         kill: () => {},
       });
       const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-        'cross-spawn': spawnStub,
+        '../../src/utils/spawn': spawnStub,
       });
 
       const context = await getContext();
@@ -294,7 +294,7 @@ describe('test/unit/components/framework/index.test.js', () => {
       kill: () => {},
     });
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -319,7 +319,7 @@ describe('test/unit/components/framework/index.test.js', () => {
     });
 
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -351,7 +351,7 @@ describe('test/unit/components/framework/index.test.js', () => {
     });
 
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -444,7 +444,7 @@ describe('test/unit/components/framework/index.test.js', () => {
         kill: () => {},
       });
       const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-        'cross-spawn': spawnStub,
+        '../../src/utils/spawn': spawnStub,
       });
 
       const context = await getContext();
@@ -470,7 +470,7 @@ describe('test/unit/components/framework/index.test.js', () => {
     });
 
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -553,7 +553,7 @@ describe('test/unit/components/framework/index.test.js', () => {
         kill: () => {},
       });
       const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-        'cross-spawn': spawnStub,
+        '../../src/utils/spawn': spawnStub,
       });
 
       const context = await getContext();
@@ -580,7 +580,7 @@ describe('test/unit/components/framework/index.test.js', () => {
     });
 
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -607,7 +607,7 @@ describe('test/unit/components/framework/index.test.js', () => {
     });
 
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -657,7 +657,7 @@ describe('test/unit/components/framework/index.test.js', () => {
       kill: () => {},
     });
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -700,7 +700,7 @@ describe('test/unit/components/framework/index.test.js', () => {
       kill: () => {},
     });
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
@@ -727,7 +727,7 @@ describe('test/unit/components/framework/index.test.js', () => {
       kill: () => {},
     });
     const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
-      'cross-spawn': spawnStub,
+      '../../src/utils/spawn': spawnStub,
     });
 
     const context = await getContext();
