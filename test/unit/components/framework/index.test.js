@@ -532,6 +532,12 @@ describe('test/unit/components/framework/index.test.js', () => {
         success: 'invoked function "handler"',
       },
       {
+        command: 'invoke',
+        options: { f: 'handler' },
+        start: 'invoking function "handler"',
+        success: 'invoked function "handler"',
+      },
+      {
         command: 'invoke:local',
         options: { function: 'handler' },
         start: 'invoking function locally "handler"',

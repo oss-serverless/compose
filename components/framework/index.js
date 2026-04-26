@@ -25,8 +25,9 @@ const COMMAND_PROGRESS_TEXT = Object.freeze({
 });
 
 const formatCommandProgressText = (text, options) => {
-  if (!options.function) return text;
-  return `${text} "${options.function}"`;
+  const functionName = options.function || options.f;
+  if (!functionName) return text;
+  return `${text} "${functionName}"`;
 };
 
 const formatCliParam = (key, value) => {
