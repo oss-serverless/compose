@@ -12,12 +12,12 @@
     "oslsc": "bin/serverless-compose"
   },
   "scripts": {
-    "lint": "eslint .",
-    "lint:updated": "pipe-git-updated --ext=cjs --ext=js --ext=mjs --base=main -- eslint",
-    "prettier-check": "prettier -c \"**/*.{cjs,css,html,js,json,md,mjs,yaml,yml}\"",
-    "prettier-check:updated": "pipe-git-updated --ext=cjs --ext=css --ext=html --ext=js --ext=json --ext=md --ext=mjs --ext=yaml --ext=yml --base=main -- prettier -c",
-    "prettify": "prettier --write \"**/*.{cjs,css,html,js,json,md,mjs,yaml,yml}\"",
-    "prettify:updated": "pipe-git-updated --ext=cjs --ext=css --ext=html --ext=js --ext=json --ext=md --ext=mjs --ext=yaml --ext=yml --base=main -- prettier --write",
+    "lint": "eslint . bin/serverless-compose",
+    "lint:updated": "pipe-git-updated --ext=cjs --ext=js --ext=mjs --base=main -- eslint && pipe-git-updated --base=main bin -- eslint",
+    "prettier-check": "prettier -c \"**/*.{cjs,css,html,js,json,md,mjs,yaml,yml}\" && prettier -c --parser babel bin/serverless-compose",
+    "prettier-check:updated": "pipe-git-updated --ext=cjs --ext=css --ext=html --ext=js --ext=json --ext=md --ext=mjs --ext=yaml --ext=yml --base=main -- prettier -c && pipe-git-updated --base=main bin -- prettier -c --parser=babel",
+    "prettify": "prettier --write \"**/*.{cjs,css,html,js,json,md,mjs,yaml,yml}\" && prettier --write --parser babel bin/serverless-compose",
+    "prettify:updated": "pipe-git-updated --ext=cjs --ext=css --ext=html --ext=js --ext=json --ext=md --ext=mjs --ext=yaml --ext=yml --base=main -- prettier --write && pipe-git-updated --base=main bin -- prettier --write --parser=babel",
     "test": "mocha --config test/mocha/unit.cjs"
   },
   "license": "MIT",

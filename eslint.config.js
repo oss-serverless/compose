@@ -29,7 +29,7 @@ module.exports = [
   importX.flatConfigs.recommended,
   eslintConfigPrettier,
   {
-    files: ['**/*.{cjs,js,mjs}'],
+    files: ['**/*.{cjs,js,mjs}', 'bin/serverless-compose'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'commonjs',
@@ -46,7 +46,12 @@ module.exports = [
         },
       ],
       'import-x/no-unresolved': ['error', { commonjs: true }],
-      'no-unused-vars': ['error', { caughtErrors: 'none' }],
+      'no-unused-vars': [
+        'error',
+        {
+          caughtErrors: 'all',
+        },
+      ],
       'n/no-unsupported-features/node-builtins': ['error', { allowExperimental: true }],
       'n/no-extraneous-require': 'off',
       'n/no-unpublished-require': 'off',
@@ -54,6 +59,12 @@ module.exports = [
       'n/no-process-exit': 'off',
       'n/no-deprecated-api': 'off',
       'n/hashbang': 'off',
+    },
+  },
+  {
+    files: ['bin/serverless-compose', 'components/**/*.js', 'src/**/*.js'],
+    rules: {
+      'n/no-unpublished-require': 'error',
     },
   },
   {

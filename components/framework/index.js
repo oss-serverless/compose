@@ -328,7 +328,7 @@ class ServerlessFramework {
     const { stdout: infoOutput } = await this.exec('serverless', ['info', '--verbose']);
     try {
       return YAML.load(infoOutput.toString())['Stack Outputs'];
-    } catch (e) {
+    } catch {
       if (infoOutput.toString()) {
         // Try to extract the section with `Stack Outputs` and parse it
         // The regex below matches everything indented with 2 spaces below "Stack Outputs:"

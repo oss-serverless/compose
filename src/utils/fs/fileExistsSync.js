@@ -6,7 +6,7 @@ const fileExistsSync = (filePath) => {
   try {
     const stats = fse.lstatSync(filePath);
     return stats.isFile();
-  } catch (e) {
+  } catch {
     return false;
   }
 };
