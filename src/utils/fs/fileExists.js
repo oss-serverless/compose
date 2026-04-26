@@ -7,7 +7,7 @@ const fileExists = curry(async (filePath) => {
   try {
     const stats = await fse.lstat(filePath);
     return stats.isFile();
-  } catch (error) {
+  } catch {
     return false;
   }
 });
