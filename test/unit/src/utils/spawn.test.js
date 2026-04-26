@@ -12,6 +12,20 @@ const expectRejected = async (promise) => {
   throw new Error('Expected promise to reject');
 };
 
+const assertRedaction = async ({ args, redacted, visible = [] }) => {
+  const error = await expectRejected(
+    spawn(process.execPath, ['-e', 'process.exit(7);', '--', ...args])
+  );
+
+  for (const value of redacted) {
+    expect(error.message).to.not.include(value);
+  }
+
+  for (const value of visible) {
+    expect(error.message).to.include(value);
+  }
+};
+
 describe('spawn', () => {
   it('executes package manager shims through cross-platform resolution', async () => {
     const result = await spawn('npm', ['--version']);
@@ -82,6 +96,40 @@ describe('spawn', () => {
     expect(error.message).to.not.include('secret-token');
     expect(error.message).to.include('--password <redacted>');
     expect(error.message).to.include('--token=<redacted>');
+  });
+
+  it('redacts sensitive option values in generated error messages', async () => {
+    await assertRedaction({
+      args: [
+        '--authorization',
+        'Bearer abc',
+        '--credential',
+        'profile',
+        '--api-key',
+        'key-value',
+        '--access_key',
+        'access-value',
+        '--pwd',
+        'pwd-value',
+        '--SECRET',
+        'secret-value',
+        '--secret=inline-secret',
+        '--monkey',
+        'visible-value',
+        '--tokenizer',
+        'visible-tokenizer',
+      ],
+      redacted: [
+        'Bearer abc',
+        'profile',
+        'key-value',
+        'access-value',
+        'pwd-value',
+        'secret-value',
+        'inline-secret',
+      ],
+      visible: ['--monkey', 'visible-value', '--tokenizer', 'visible-tokenizer'],
+    });
   });
 
   it('preserves spawn error codes such as ENOENT', async () => {
