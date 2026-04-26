@@ -374,6 +374,131 @@ describe('test/unit/components/framework/index.test.js', () => {
     expect(spawnStub.getCall(0).args[2].cwd).to.equal('custom-path');
   });
 
+  it('passes documented nested Framework commands through to Serverless CLI', async () => {
+    const cases = [
+      {
+        command: 'deploy:function',
+        options: { function: 'handler' },
+        expectedArgs: ['deploy', 'function', '--function=handler', '--stage', 'dev'],
+      },
+      {
+        command: 'deploy:list',
+        options: { 'region': 'us-east-1', 'aws-profile': 'dev-profile' },
+        expectedArgs: [
+          'deploy',
+          'list',
+          '--region=us-east-1',
+          '--aws-profile=dev-profile',
+          '--stage',
+          'dev',
+        ],
+      },
+      {
+        command: 'deploy:list:functions',
+        options: {},
+        expectedArgs: ['deploy', 'list', 'functions', '--stage', 'dev'],
+      },
+      {
+        command: 'rollback:function',
+        options: { 'function': 'handler', 'function-version': '23' },
+        expectedArgs: [
+          'rollback',
+          'function',
+          '--function=handler',
+          '--function-version=23',
+          '--stage',
+          'dev',
+        ],
+      },
+      {
+        command: 'invoke',
+        options: { function: 'handler', data: '{"ok":true}', raw: true },
+        expectedArgs: [
+          'invoke',
+          '--function=handler',
+          '--data={"ok":true}',
+          '--raw',
+          '--stage',
+          'dev',
+        ],
+      },
+      {
+        command: 'invoke:local',
+        options: { function: 'handler', path: 'event.json' },
+        expectedArgs: [
+          'invoke',
+          'local',
+          '--function=handler',
+          '--path=event.json',
+          '--stage',
+          'dev',
+        ],
+      },
+    ];
+
+    for (const testCase of cases) {
+      const spawnStub = sinon.stub().returns({
+        on: (arg, cb) => {
+          if (arg === 'close') cb(0);
+        },
+        kill: () => {},
+      });
+      const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
+        'cross-spawn': spawnStub,
+      });
+
+      const context = await getContext();
+      const component = new FrameworkComponent('some-id', context, { path: 'path' });
+      context.state.detectedFrameworkVersion = '9.9.9';
+
+      await component.command(testCase.command, testCase.options);
+
+      expect(spawnStub).to.be.calledOnce;
+      expect(spawnStub.getCall(0).args[0]).to.equal('serverless');
+      expect(spawnStub.getCall(0).args[1]).to.deep.equal(testCase.expectedArgs);
+      expect(spawnStub.getCall(0).args[2].cwd).to.equal('path');
+      expect(spawnStub.getCall(0).args[2].stdio).to.equal('inherit');
+    }
+  });
+
+  it('preserves repeated passthrough options', async () => {
+    const spawnStub = sinon.stub().returns({
+      on: (arg, cb) => {
+        if (arg === 'close') cb(0);
+      },
+      kill: () => {},
+    });
+
+    const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
+      'cross-spawn': spawnStub,
+    });
+
+    const context = await getContext();
+    const component = new FrameworkComponent('some-id', context, { path: 'path' });
+    context.state.detectedFrameworkVersion = '9.9.9';
+
+    await component.command('invoke:local', {
+      function: 'handler',
+      env: ['VAR1=value1', 'VAR2=value2'],
+      e: ['SHORT1=value1', 'SHORT2=value2'],
+    });
+
+    expect(spawnStub).to.be.calledOnce;
+    expect(spawnStub.getCall(0).args[1]).to.deep.equal([
+      'invoke',
+      'local',
+      '--function=handler',
+      '--env=VAR1=value1',
+      '--env=VAR2=value2',
+      '-e',
+      'SHORT1=value1',
+      '-e',
+      'SHORT2=value2',
+      '--stage',
+      'dev',
+    ]);
+  });
+
   it('correctly ignores `stage` from options to not duplicate it when executing command', async () => {
     const spawnStub = sinon.stub().returns({
       on: (arg, cb) => {
