@@ -19,7 +19,7 @@ describe('test/unit/bin/serverless-compose.test.js', () => {
   it('exits before loading the runtime on unsupported Node versions', () => {
     process.argv = ['node', 'serverless-compose', 'deploy', '--verbose'];
     const isSupportedNodeVersion = sinon.stub().returns(false);
-    isSupportedNodeVersion.supportedRange = '^20.19.0 || >=22.12.0';
+    isSupportedNodeVersion.supportedRange = '^20.19.0 || ^22.13.0 || >=24';
     const runComponents = sinon.stub();
     const stderrWrite = sinon.stub(process.stderr, 'write');
     const processExitError = new Error('process.exit');
@@ -39,7 +39,7 @@ describe('test/unit/bin/serverless-compose.test.js', () => {
     expect(stderrWrite).to.have.been.calledOnceWithExactly(
       'Error: Serverless Framework Compose v1.3.0 does not support ' +
         `Node.js ${process.version}. Please use a supported release. ` +
-        'Supported versions: ^20.19.0 || >=22.12.0.\n'
+        'Supported versions: ^20.19.0 || ^22.13.0 || >=24.\n'
     );
     expect(processExit).to.have.been.calledOnceWithExactly(1);
     expect(runComponents.called).to.equal(false);
@@ -48,7 +48,7 @@ describe('test/unit/bin/serverless-compose.test.js', () => {
   it('loads the runtime on supported Node versions', () => {
     process.argv = ['node', 'serverless-compose', 'deploy', '--verbose'];
     const isSupportedNodeVersion = sinon.stub().returns(true);
-    isSupportedNodeVersion.supportedRange = '^20.19.0 || >=22.12.0';
+    isSupportedNodeVersion.supportedRange = '^20.19.0 || ^22.13.0 || >=24';
     const runComponents = sinon.stub().resolves();
     const stderrWrite = sinon.stub(process.stderr, 'write');
     const processExit = sinon.stub(process, 'exit');
@@ -72,7 +72,7 @@ describe('test/unit/bin/serverless-compose.test.js', () => {
     expect(() => {
       loadBin({
         '../src/cli/is-supported-node-version': Object.assign(sinon.stub().returns(true), {
-          supportedRange: '^20.19.0 || >=22.12.0',
+          supportedRange: '^20.19.0 || ^22.13.0 || >=24',
         }),
         '../src': {
           runComponents: sinon.stub().returns({

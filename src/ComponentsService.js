@@ -74,8 +74,7 @@ const validateGraph = (graph) => {
     const cycles = alg.findCycles(graph);
     const msg = ['Your template has circular dependencies:'];
     cycles.forEach((cycle, index) => {
-      let fromAToB = cycle.join(' --> ');
-      fromAToB = `${(index += 1)}. ${fromAToB}`;
+      const fromAToB = `${index + 1}. ${cycle.join(' --> ')}`;
       const fromBToA = cycle.reverse().join(' <-- ');
       const padLength = fromAToB.length + 4;
       msg.push(fromAToB.padStart(padLength));
