@@ -6,7 +6,7 @@
  * https://github.com/jcarpanelli/spinnies/blob/master/LICENSE
  */
 
-const cliCursor = require('cli-cursor');
+const cliCursor = require('cli-cursor').default;
 const { stderrCliColors: colors } = require('./colors');
 const symbols = require('./symbols');
 const isUnicodeSupported = require('./is-unicode-supported');

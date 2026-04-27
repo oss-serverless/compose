@@ -12,6 +12,7 @@ const readConfiguration = require('./configuration/read');
 const { validateConfiguration } = require('./configuration/validate');
 const validateOptions = require('./validate-options');
 const initializeNodeLogging = require('./utils/serverless-utils/log-reporters/node');
+const { signals } = require('signal-exit/signals');
 
 let options;
 let method;
@@ -24,7 +25,7 @@ process.once('uncaughtException', (error) => {
   handleError(error, usedContext.output);
 });
 
-require('signal-exit/signals').forEach((signal) => {
+signals.forEach((signal) => {
   process.once(signal, () => {
     // If there's another listener (e.g. we're in deamon context or reading stdin input)
     // then let the other listener decide how process will exit

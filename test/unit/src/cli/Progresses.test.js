@@ -4,15 +4,38 @@ const expect = require('chai').expect;
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 
-const Progresses = require('../../../../src/cli/Progresses');
-
 describe('test/unit/src/cli/Progresses.test.js', () => {
-  const loadProgresses = (isUnicodeSupported) =>
-    proxyquire.noCallThru().load('../../../../src/cli/Progresses', {
+  let loadedProgresses = [];
+
+  const createCliCursorStub = () => ({
+    show: sinon.stub(),
+    hide: sinon.stub(),
+  });
+
+  const loadProgresses = (isUnicodeSupported = true, cliCursor = createCliCursorStub()) => {
+    const Progresses = proxyquire.noCallThru().load('../../../../src/cli/Progresses', {
+      'cli-cursor': { default: cliCursor },
       './is-unicode-supported': () => isUnicodeSupported,
     });
+    loadedProgresses.push(Progresses);
+
+    return { Progresses, cliCursor };
+  };
+
+  afterEach(() => {
+    for (const Progresses of loadedProgresses) {
+      if (Progresses.sigintHandler) {
+        process.removeListener('SIGINT', Progresses.sigintHandler);
+      }
+      delete Progresses.sigintHandler;
+      delete Progresses.lastBoundInstance;
+    }
+    loadedProgresses = [];
+    sinon.restore();
+  });
 
   const createProgresses = (columns = 5, rows = 3) => {
+    const { Progresses } = loadProgresses();
     const progresses = Object.create(Progresses.prototype);
     progresses.output = {
       interactiveStderr: { columns, rows },
@@ -41,6 +64,7 @@ describe('test/unit/src/cli/Progresses.test.js', () => {
   });
 
   it('tracks progresses in a null-prototype registry', () => {
+    const { Progresses } = loadProgresses();
     const progresses = Object.create(Progresses.prototype);
     progresses.output = {
       interactiveStderr: null,
@@ -59,39 +83,50 @@ describe('test/unit/src/cli/Progresses.test.js', () => {
   });
 
   it('uses dots spinner when unicode is supported', () => {
-    const LocalProgresses = loadProgresses(true);
-    const bindSigintStub = sinon.stub(LocalProgresses.prototype, 'bindSigint');
+    const { Progresses: LocalProgresses } = loadProgresses(true);
+    sinon.stub(LocalProgresses.prototype, 'bindSigint');
 
-    try {
-      const progresses = new LocalProgresses({});
+    const progresses = new LocalProgresses({});
 
-      expect(progresses.options.spinner.frames).to.deep.equal([
-        '⠋',
-        '⠙',
-        '⠹',
-        '⠸',
-        '⠼',
-        '⠴',
-        '⠦',
-        '⠧',
-        '⠇',
-        '⠏',
-      ]);
-    } finally {
-      bindSigintStub.restore();
-    }
+    expect(progresses.options.spinner.frames).to.deep.equal([
+      '⠋',
+      '⠙',
+      '⠹',
+      '⠸',
+      '⠼',
+      '⠴',
+      '⠦',
+      '⠧',
+      '⠇',
+      '⠏',
+    ]);
   });
 
   it('uses dashes spinner when unicode is not supported', () => {
-    const LocalProgresses = loadProgresses(false);
-    const bindSigintStub = sinon.stub(LocalProgresses.prototype, 'bindSigint');
+    const { Progresses: LocalProgresses } = loadProgresses(false);
+    sinon.stub(LocalProgresses.prototype, 'bindSigint');
 
-    try {
-      const progresses = new LocalProgresses({});
+    const progresses = new LocalProgresses({});
 
-      expect(progresses.options.spinner.frames).to.deep.equal(['-', '_']);
-    } finally {
-      bindSigintStub.restore();
-    }
+    expect(progresses.options.spinner.frames).to.deep.equal(['-', '_']);
+  });
+
+  it('restores cursor and exits through SIGINT handler', () => {
+    const { Progresses: LocalProgresses, cliCursor } = loadProgresses();
+    const processExit = sinon.stub(process, 'exit');
+    const moveCursor = sinon.stub();
+
+    const progresses = new LocalProgresses({
+      interactiveStderr: { moveCursor },
+      verbose: sinon.stub(),
+    });
+    progresses.lineCount = 2;
+
+    process.removeListener('SIGINT', LocalProgresses.sigintHandler);
+    LocalProgresses.sigintHandler();
+
+    expect(cliCursor.show).to.have.been.calledOnceWithExactly();
+    expect(moveCursor).to.have.been.calledOnceWithExactly(0, 2);
+    expect(processExit).to.have.been.calledOnceWithExactly(0);
   });
 });
