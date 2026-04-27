@@ -1,11 +1,17 @@
 'use strict';
 
 const expect = require('chai').expect;
+const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 
 const Progresses = require('../../../../src/cli/Progresses');
 
 describe('test/unit/src/cli/Progresses.test.js', () => {
+  const loadProgresses = (isUnicodeSupported) =>
+    proxyquire.noCallThru().load('../../../../src/cli/Progresses', {
+      './is-unicode-supported': () => isUnicodeSupported,
+    });
+
   const createProgresses = (columns = 5, rows = 3) => {
     const progresses = Object.create(Progresses.prototype);
     progresses.output = {
@@ -50,5 +56,42 @@ describe('test/unit/src/cli/Progresses.test.js', () => {
     expect(Object.getPrototypeOf(progresses.progresses)).to.equal(null);
     expect(progresses.exists('service')).to.deep.include({ status: 'success', text: 'done' });
     expect(progresses.exists('constructor')).to.equal(undefined);
+  });
+
+  it('uses dots spinner when unicode is supported', () => {
+    const LocalProgresses = loadProgresses(true);
+    const bindSigintStub = sinon.stub(LocalProgresses.prototype, 'bindSigint');
+
+    try {
+      const progresses = new LocalProgresses({});
+
+      expect(progresses.options.spinner.frames).to.deep.equal([
+        '⠋',
+        '⠙',
+        '⠹',
+        '⠸',
+        '⠼',
+        '⠴',
+        '⠦',
+        '⠧',
+        '⠇',
+        '⠏',
+      ]);
+    } finally {
+      bindSigintStub.restore();
+    }
+  });
+
+  it('uses dashes spinner when unicode is not supported', () => {
+    const LocalProgresses = loadProgresses(false);
+    const bindSigintStub = sinon.stub(LocalProgresses.prototype, 'bindSigint');
+
+    try {
+      const progresses = new LocalProgresses({});
+
+      expect(progresses.options.spinner.frames).to.deep.equal(['-', '_']);
+    } finally {
+      bindSigintStub.restore();
+    }
   });
 });

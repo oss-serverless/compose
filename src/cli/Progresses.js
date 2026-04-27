@@ -9,7 +9,7 @@
 const cliCursor = require('cli-cursor');
 const { stderrCliColors: colors } = require('./colors');
 const symbols = require('./symbols');
-const isUnicodeSupported = require('is-unicode-supported');
+const isUnicodeSupported = require('./is-unicode-supported');
 const { stripVTControlCharacters: stripAnsi } = require('node:util');
 const { createRegistry, hasOwn } = require('../utils/safe-object');
 

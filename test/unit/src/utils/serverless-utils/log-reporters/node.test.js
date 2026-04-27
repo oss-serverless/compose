@@ -104,6 +104,76 @@ describe('test/unit/src/utils/serverless-utils/log-reporters/node.test.js', () =
     expect(uniGlobalState.logIsInteractive).to.equal('1');
   });
 
+  it('registers the progress reporter when stdin and stdout are TTY outside CI', () => {
+    const uniGlobalState = {};
+
+    const { progressReporter, result } = loadModule(uniGlobalState, {
+      stdin: { isTTY: true },
+      stdout: { isTTY: true, write: sinon.stub() },
+      env: {},
+    });
+
+    expect(progressReporter).to.have.been.calledOnceWithExactly({ logLevelIndex: 2 });
+    expect(uniGlobalState.logIsInteractive).to.equal(true);
+    expect(result).to.deep.equal({ logLevelIndex: 2, isInteractive: true });
+  });
+
+  it('matches Serverless by treating empty CI as interactive', () => {
+    const uniGlobalState = {};
+
+    const { progressReporter, result } = loadModule(uniGlobalState, {
+      stdin: { isTTY: true },
+      stdout: { isTTY: true, write: sinon.stub() },
+      env: { CI: '' },
+    });
+
+    expect(progressReporter).to.have.been.calledOnceWithExactly({ logLevelIndex: 2 });
+    expect(uniGlobalState.logIsInteractive).to.equal(true);
+    expect(result).to.deep.equal({ logLevelIndex: 2, isInteractive: true });
+  });
+
+  it('does not register the progress reporter when stdin is not TTY', () => {
+    const uniGlobalState = {};
+
+    const { progressReporter, result } = loadModule(uniGlobalState, {
+      stdin: { isTTY: false },
+      stdout: { isTTY: true, write: sinon.stub() },
+      env: {},
+    });
+
+    expect(progressReporter.called).to.equal(false);
+    expect(uniGlobalState.logIsInteractive).to.equal(undefined);
+    expect(result).to.deep.equal({ logLevelIndex: 2, isInteractive: undefined });
+  });
+
+  it('does not register the progress reporter when stdout is not TTY', () => {
+    const uniGlobalState = {};
+
+    const { progressReporter, result } = loadModule(uniGlobalState, {
+      stdin: { isTTY: true },
+      stdout: { isTTY: false, write: sinon.stub() },
+      env: {},
+    });
+
+    expect(progressReporter.called).to.equal(false);
+    expect(uniGlobalState.logIsInteractive).to.equal(undefined);
+    expect(result).to.deep.equal({ logLevelIndex: 2, isInteractive: undefined });
+  });
+
+  it('does not register the progress reporter when CI is truthy', () => {
+    const uniGlobalState = {};
+
+    const { progressReporter, result } = loadModule(uniGlobalState, {
+      stdin: { isTTY: true },
+      stdout: { isTTY: true, write: sinon.stub() },
+      env: { CI: '1' },
+    });
+
+    expect(progressReporter.called).to.equal(false);
+    expect(uniGlobalState.logIsInteractive).to.equal(undefined);
+    expect(result).to.deep.equal({ logLevelIndex: 2, isInteractive: undefined });
+  });
+
   it('writes text-mode output events through joinTextTokens', () => {
     const handlers = new Map();
     const outputEmitter = {
