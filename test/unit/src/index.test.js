@@ -7,7 +7,26 @@ const sinon = require('sinon');
 const expect = chai.expect;
 
 describe('test/unit/src/index.test.js', () => {
+  const moduleSignals = ['SIGINT', 'SIGTERM'];
+  const moduleEvents = ['uncaughtException', ...moduleSignals];
+  let listenerSnapshots = [];
+
+  const snapshotListeners = () =>
+    new Map(moduleEvents.map((event) => [event, process.listeners(event)]));
+
+  const restoreAddedListeners = (snapshot) => {
+    for (const [event, previousListeners] of snapshot) {
+      for (const listener of process.listeners(event)) {
+        if (!previousListeners.includes(listener)) {
+          process.removeListener(event, listener);
+        }
+      }
+    }
+  };
+
   afterEach(() => {
+    for (const snapshot of listenerSnapshots) restoreAddedListeners(snapshot);
+    listenerSnapshots = [];
     sinon.restore();
   });
 
@@ -36,8 +55,11 @@ describe('test/unit/src/index.test.js', () => {
       ComponentsService.onCall(index).returns(instance);
     });
 
+    const listenerSnapshot = snapshotListeners();
+    listenerSnapshots.push(listenerSnapshot);
     delete require.cache[require.resolve('../../../src/index.js')];
-    const { runComponents } = proxyquire('../../../src', {
+    const { runComponents } = proxyquire.noCallThru().load('../../../src', {
+      'signal-exit/signals': { signals: moduleSignals },
       './render-help': sinon.stub().resolves(),
       './Context': FakeContext,
       './ComponentsService': ComponentsService,
