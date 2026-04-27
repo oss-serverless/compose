@@ -832,6 +832,76 @@ describe('test/unit/components/framework/index.test.js', () => {
       .and.have.property('code', 'INVALID_PATH_IN_SERVICE_CONFIGURATION');
   });
 
+  it('skips deploy when cache inputs and cache hash are unchanged', async () => {
+    const serviceDir = await fs.mkdtemp(path.join(process.cwd(), 'cache-hash-skip-'));
+
+    try {
+      await fse.outputFile(path.join(serviceDir, 'handler.js'), 'module.exports = 1;\n');
+
+      const spawnStub = sinon.stub();
+      const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
+        '../../src/utils/spawn': spawnStub,
+      });
+
+      const context = await getContext();
+      const inputs = {
+        path: serviceDir,
+        cachePatterns: ['handler.js'],
+      };
+      const component = new FrameworkComponent('id', context, inputs);
+
+      context.state.inputs = inputs;
+      context.state.cacheHash = await component.calculateCacheHash();
+
+      await component.deploy();
+
+      expect(spawnStub).to.not.have.been.called;
+    } finally {
+      await fse.remove(serviceDir);
+    }
+  });
+
+  it('updates cache hash after deploying changed cache pattern files', async () => {
+    const serviceDir = await fs.mkdtemp(path.join(process.cwd(), 'cache-hash-update-'));
+
+    try {
+      const filePath = path.join(serviceDir, 'handler.js');
+      await fse.outputFile(filePath, 'module.exports = 1;\n');
+
+      const spawnStub = sinon.stub();
+      spawnStub.onFirstCall().returns(createSpawnExecution({ stderr: 'deployed' }));
+      spawnStub.onSecondCall().returns(
+        createSpawnExecution({
+          stdout: 'region: us-east-1\n\nStack Outputs:\n  Key: Output',
+        })
+      );
+
+      const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
+        '../../src/utils/spawn': spawnStub,
+      });
+
+      const context = await getContext();
+      const inputs = {
+        path: serviceDir,
+        cachePatterns: ['handler.js'],
+      };
+      const component = new FrameworkComponent('id', context, inputs);
+
+      context.state.detectedFrameworkVersion = '9.9.9';
+      context.state.inputs = inputs;
+      context.state.cacheHash = await component.calculateCacheHash();
+
+      await fse.outputFile(filePath, 'module.exports = 2;\n');
+
+      await component.deploy();
+
+      expect(spawnStub).to.be.calledTwice;
+      expect(context.state.cacheHash).to.equal(await component.calculateCacheHash());
+    } finally {
+      await fse.remove(serviceDir);
+    }
+  });
+
   it('expands literal directory cache patterns when calculating hashes', async () => {
     const serviceDir = await fs.mkdtemp(path.join(process.cwd(), 'cache-hash-dir-'));
 
