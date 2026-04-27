@@ -56,8 +56,8 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "aws-sdk-client-mock": "^4.1.0",
-    "chai": "^4.3.6",
-    "chai-as-promised": "^7.1.1",
+    "chai": "^6.2.2",
+    "chai-as-promised": "^8.0.2",
     "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import-x": "^4.16.2",
@@ -67,8 +67,8 @@
     "mocha": "12.0.0-beta-9.2",
     "prettier": "^3.8.3",
     "proxyquire": "^2.1.3",
-    "sinon": "^13.0.2",
-    "sinon-chai": "^3.7.0"
+    "sinon": "^21.1.2",
+    "sinon-chai": "^4.0.1"
   },
   "engines": {
     "node": "^20.19.0 || ^22.13.0 || >=24"
