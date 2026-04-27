@@ -10,8 +10,8 @@ env:
   FORCE_COLOR: 1
 
 jobs:
-  linuxNode22:
-    name: '[Linux] Node 22: Lint, Formatting, Unit & packaging tests'
+  lint:
+    name: '[Linux] Node 24: Formatting, lint & package smoke test'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -30,6 +30,42 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.npm
+          key: npm-no-lock-v1-${{ runner.os }}-node24-${{ hashFiles('package.json') }}
+          restore-keys: |
+            npm-no-lock-v1-${{ runner.os }}-node24-
+
+      - name: Install Node.js and npm
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm install --package-lock=false
+
+      - name: Validate formatting
+        run: npm run prettier-check:updated
+
+      - name: Validate lint rules
+        run: npm run lint:updated
+
+      - name: Verify package contents
+        run: npm pack --dry-run
+
+      - name: Packed install smoke test
+        run: node ./scripts/ci/pack-smoke.js
+
+  linuxNode22:
+    name: '[Linux] Node 22: Unit tests'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Restore npm cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
           key: npm-no-lock-v1-${{ runner.os }}-node22-${{ hashFiles('package.json') }}
           restore-keys: |
             npm-no-lock-v1-${{ runner.os }}-node22-
@@ -43,20 +79,8 @@ jobs:
       - name: Install dependencies
         run: npm install --package-lock=false
 
-      - name: Validate formatting
-        run: npm run prettier-check:updated
-
-      - name: Validate lint rules
-        run: npm run lint:updated
-
       - name: Unit tests
         run: npm test
-
-      - name: Verify package contents
-        run: npm pack --dry-run
-
-      - name: Packed install smoke test
-        run: node ./scripts/ci/pack-smoke.js
 
   windowsNode22:
     name: '[Windows] Node 22: Unit tests'
