@@ -42,7 +42,6 @@
     "ext": "^1.7.0",
     "fast-glob": "^3.3.3",
     "fs-extra": "^10.1.0",
-    "is-interactive": "^1",
     "is-unicode-supported": "^0.1",
     "js-yaml": "^4.1.0",
     "log": "^6.3.1",

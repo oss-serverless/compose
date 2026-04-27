@@ -5,7 +5,6 @@ const symbols = require('./symbols');
 const fs = require('fs');
 const { stripVTControlCharacters: stripAnsi } = require('node:util');
 const path = require('path');
-const isInteractiveTerminal = require('is-interactive');
 const { PassThrough } = require('stream');
 
 /**
@@ -29,7 +28,9 @@ class Output {
     this.stdout = disableIO ? new PassThrough() : process.stdout;
     this.stderr = disableIO ? new PassThrough() : process.stderr;
     this.logsFileStream = disableIO ? new PassThrough() : this.openLogsFile();
-    if (!disableIO && isInteractiveTerminal()) {
+    const isInteractive = process.stdin.isTTY && process.stdout.isTTY && !process.env.CI;
+
+    if (!disableIO && isInteractive) {
       this.interactiveStdout = process.stdout;
       this.interactiveStderr = process.stderr;
       this.interactiveStdin = process.stdin;
@@ -37,7 +38,7 @@ class Output {
 
     // We want to apply it only in non-test environment so we check this only if
     // disableIO is not explicitly set to true
-    if (!isInteractiveTerminal() && disableIO === false) {
+    if (!isInteractive && disableIO === false) {
       // We also want to enable verbose by default for non-interactive environments
       this.verboseMode = true;
     }

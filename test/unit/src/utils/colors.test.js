@@ -27,6 +27,15 @@ describe('test/unit/src/utils/colors.test.js', () => {
     ).to.equal(0);
   });
 
+  it('disables colors for dumb terminals', () => {
+    expect(
+      getColorLevel({
+        stream: { isTTY: true, getColorDepth: () => 24 },
+        env: { TERM: 'dumb' },
+      })
+    ).to.equal(0);
+  });
+
   it('treats COLORTERM=truecolor case-insensitively', () => {
     expect(
       getColorLevel({

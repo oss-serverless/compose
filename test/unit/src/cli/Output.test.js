@@ -2,9 +2,27 @@
 
 const expect = require('chai').expect;
 const proxyquire = require('proxyquire');
+const sinon = require('sinon');
+const { PassThrough } = require('stream');
 const Output = require('../../../../src/cli/Output');
 const colors = require('../../../../src/cli/colors');
 const readStream = require('../../read-stream');
+
+const setProperty = (object, property, value) => {
+  Object.defineProperty(object, property, {
+    configurable: true,
+    writable: true,
+    value,
+  });
+};
+
+const restoreProperty = (object, property, descriptor) => {
+  if (descriptor) {
+    Object.defineProperty(object, property, descriptor);
+  } else {
+    delete object[property];
+  }
+};
 
 describe('test/unit/lib/cli/Output.test.js', () => {
   /** @type {Output} */
@@ -143,5 +161,101 @@ describe('test/unit/lib/cli/Output.test.js', () => {
     expect(await readStream(output.logsFileStream)).to.contain(
       'Error: TypeError: An error\n    at Context.<anonymous>'
     );
+  });
+
+  describe('interactivity detection', () => {
+    let originalStdinIsTTYDescriptor;
+    let originalStdoutIsTTYDescriptor;
+    let originalCI;
+    let hadCI;
+    let openLogsFileStub;
+
+    beforeEach(() => {
+      originalStdinIsTTYDescriptor = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+      originalStdoutIsTTYDescriptor = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY');
+      hadCI = Object.prototype.hasOwnProperty.call(process.env, 'CI');
+      originalCI = process.env.CI;
+      openLogsFileStub = sinon.stub(Output.prototype, 'openLogsFile').returns(new PassThrough());
+    });
+
+    afterEach(() => {
+      openLogsFileStub.restore();
+      restoreProperty(process.stdin, 'isTTY', originalStdinIsTTYDescriptor);
+      restoreProperty(process.stdout, 'isTTY', originalStdoutIsTTYDescriptor);
+      if (hadCI) {
+        process.env.CI = originalCI;
+      } else {
+        delete process.env.CI;
+      }
+    });
+
+    const createOutput = ({ stdinIsTTY, stdoutIsTTY, ci } = {}) => {
+      setProperty(process.stdin, 'isTTY', stdinIsTTY);
+      setProperty(process.stdout, 'isTTY', stdoutIsTTY);
+      if (ci === undefined) {
+        delete process.env.CI;
+      } else {
+        process.env.CI = ci;
+      }
+
+      return new Output(false);
+    };
+
+    it('enables interactive streams when stdin and stdout are TTY outside CI', () => {
+      const localOutput = createOutput({ stdinIsTTY: true, stdoutIsTTY: true });
+
+      expect(localOutput.interactiveStdout).to.equal(process.stdout);
+      expect(localOutput.interactiveStderr).to.equal(process.stderr);
+      expect(localOutput.interactiveStdin).to.equal(process.stdin);
+      expect(localOutput.verboseMode).to.equal(false);
+    });
+
+    it('disables interactivity when stdin is not TTY', () => {
+      const localOutput = createOutput({ stdinIsTTY: false, stdoutIsTTY: true });
+
+      expect(localOutput.interactiveStdout).to.equal(undefined);
+      expect(localOutput.interactiveStderr).to.equal(undefined);
+      expect(localOutput.interactiveStdin).to.equal(undefined);
+      expect(localOutput.verboseMode).to.equal(true);
+    });
+
+    it('disables interactivity when stdout is not TTY', () => {
+      const localOutput = createOutput({ stdinIsTTY: true, stdoutIsTTY: false });
+
+      expect(localOutput.interactiveStdout).to.equal(undefined);
+      expect(localOutput.interactiveStderr).to.equal(undefined);
+      expect(localOutput.interactiveStdin).to.equal(undefined);
+      expect(localOutput.verboseMode).to.equal(true);
+    });
+
+    it('disables interactivity when CI is truthy', () => {
+      const localOutput = createOutput({ stdinIsTTY: true, stdoutIsTTY: true, ci: '1' });
+
+      expect(localOutput.interactiveStdout).to.equal(undefined);
+      expect(localOutput.interactiveStderr).to.equal(undefined);
+      expect(localOutput.interactiveStdin).to.equal(undefined);
+      expect(localOutput.verboseMode).to.equal(true);
+    });
+
+    it('matches Serverless by allowing interactivity when CI is empty', () => {
+      const localOutput = createOutput({ stdinIsTTY: true, stdoutIsTTY: true, ci: '' });
+
+      expect(localOutput.interactiveStdout).to.equal(process.stdout);
+      expect(localOutput.interactiveStdin).to.equal(process.stdin);
+      expect(localOutput.verboseMode).to.equal(false);
+    });
+
+    it('does not enable interactive streams when IO is disabled', () => {
+      setProperty(process.stdin, 'isTTY', true);
+      setProperty(process.stdout, 'isTTY', true);
+      delete process.env.CI;
+
+      const localOutput = new Output(false, true);
+
+      expect(localOutput.interactiveStdout).to.equal(undefined);
+      expect(localOutput.interactiveStderr).to.equal(undefined);
+      expect(localOutput.interactiveStdin).to.equal(undefined);
+      expect(localOutput.verboseMode).to.equal(false);
+    });
   });
 });
