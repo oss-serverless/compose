@@ -1,11 +1,10 @@
 'use strict';
 
 const YAML = require('js-yaml');
-const hasha = require('hasha');
-const glob = require('../../src/utils/glob');
 const path = require('path');
 const spawn = require('../../src/utils/spawn');
 const semver = require('semver');
+const calculateCacheHash = require('../../src/utils/cache-hash');
 const { configSchema } = require('./configuration');
 const ServerlessError = require('../../src/serverless-error');
 
@@ -350,22 +349,7 @@ class ServerlessFramework {
    * @return {Promise<string>}
    */
   async calculateCacheHash() {
-    const algorithm = 'md5'; // fastest
-
-    const allFilePaths = await glob(this.inputs.cachePatterns, {
-      cwd: this.inputs.path,
-    });
-
-    const promises = [];
-    for (const filePath of allFilePaths) {
-      promises.push(hasha.fromFile(path.join(this.inputs.path, filePath), { algorithm }));
-    }
-    const hashes = await Promise.all(promises);
-
-    // Sort hashes to avoid having the final hash change just because files where read in a different order
-    hashes.sort();
-
-    return hasha(hashes.join(), { algorithm });
+    return calculateCacheHash(this.inputs.cachePatterns, this.inputs.path);
   }
 }
 
