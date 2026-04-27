@@ -1,7 +1,6 @@
 'use strict';
 
 const { resolve } = require('path');
-const { isEmpty } = require('ramda');
 const { Graph, alg } = require('@dagrejs/graphlib');
 const traverse = require('traverse');
 const pLimit = require('./utils/p-limit');
@@ -220,7 +219,7 @@ const createGraph = (allComponents) => {
 
   for (const alias of Object.keys(allComponents)) {
     const { dependencies } = allComponents[alias];
-    if (!isEmpty(dependencies)) {
+    if (dependencies.length > 0) {
       for (const dependency of dependencies) {
         graph.setEdge(alias, dependency);
       }
@@ -340,7 +339,7 @@ class ComponentsService {
       outputs = await this.context.stateStorage.readComponentOutputs(options.componentName);
     } else {
       outputs = await this.context.stateStorage.readComponentsOutputs();
-      if (isEmpty(outputs)) {
+      if (outputs != null && Object.keys(outputs).length === 0) {
         throw new ServerlessError(
           'Could not find any deployed service.\nYou can deploy the project via "serverless deploy".\nIf the project is already deployed, you can synchronize your local state via "serverless refresh-outputs".',
           'NO_DEPLOYED_SERVICES_FOUND'
@@ -517,7 +516,7 @@ class ComponentsService {
       nodes = this.componentsGraph.sinks();
     }
 
-    if (isEmpty(nodes)) {
+    if (nodes.length === 0) {
       return;
     }
 
@@ -586,7 +585,7 @@ class ComponentsService {
   async instantiateComponents() {
     const leaves = this.componentsGraph.sinks();
 
-    if (isEmpty(leaves)) {
+    if (leaves.length === 0) {
       return;
     }
 
