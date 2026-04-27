@@ -60,7 +60,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/mocha": "^9.1.1",
-    "aws-sdk-client-mock": "^0.6.2",
+    "aws-sdk-client-mock": "^4.1.0",
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
     "eslint": "^10.2.1",
