@@ -1,7 +1,5 @@
 'use strict';
 
-const { endsWith } = require('ramda');
-
-const isYamlPath = (filePath) => endsWith('.yml', filePath) || endsWith('.yaml', filePath);
+const isYamlPath = (filePath) => filePath.endsWith('.yml') || filePath.endsWith('.yaml');
 
 module.exports = isYamlPath;

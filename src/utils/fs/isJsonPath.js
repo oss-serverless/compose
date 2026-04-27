@@ -1,7 +1,5 @@
 'use strict';
 
-const { endsWith } = require('ramda');
-
-const isJsonPath = endsWith('.json');
+const isJsonPath = (filePath) => filePath.endsWith('.json');
 
 module.exports = isJsonPath;

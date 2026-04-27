@@ -710,6 +710,127 @@ describe('test/unit/src/components-service.test.js', () => {
     );
   });
 
+  it('rejects global outputs command when no deployed service outputs exist', async () => {
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+    context.stateStorage = {
+      readComponentsOutputs: () => Object.create(null),
+    };
+
+    const localComponentsService = new ComponentsService(
+      context,
+      {
+        name: 'test-service',
+        services: {},
+      },
+      {}
+    );
+
+    await expect(localComponentsService.outputs()).to.eventually.be.rejected.and.have.property(
+      'code',
+      'NO_DEPLOYED_SERVICES_FOUND'
+    );
+  });
+
+  it('renders non-empty null-prototype outputs', async () => {
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+    context.stateStorage = {
+      readComponentsOutputs: () =>
+        Object.assign(Object.create(null), {
+          resources: {
+            endpoint: 'https://example.com',
+          },
+        }),
+    };
+
+    const localComponentsService = new ComponentsService(
+      context,
+      {
+        name: 'test-service',
+        services: {},
+      },
+      {}
+    );
+
+    await localComponentsService.outputs();
+
+    expect(stripAnsi(await readStream(context.output.stdout))).to.equal(
+      ['resources: ', '  endpoint: https://example.com', ''].join('\n')
+    );
+  });
+
+  it('does not add graph edges for services with no dependencies', async () => {
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+
+    const localComponentsService = new ComponentsService(
+      context,
+      {
+        name: 'test-service',
+        services: {
+          resources: {
+            path: 'resources',
+          },
+          api: {
+            path: 'api',
+          },
+        },
+      },
+      {}
+    );
+
+    await localComponentsService.init();
+
+    expect(localComponentsService.allComponents.resources.dependencies).to.deep.equal([]);
+    expect(localComponentsService.allComponents.api.dependencies).to.deep.equal([]);
+    expect(localComponentsService.componentsGraph.edgeCount()).to.equal(0);
+  });
+
+  it('returns without loading components when graph execution has no nodes', async () => {
+    const loadComponent = sinon.stub();
+    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
+      './load': { loadComponent },
+    });
+    const context = new Context({
+      root: process.cwd(),
+      stage: 'dev',
+      disableIO: true,
+      configuration: {},
+    });
+    await context.init();
+
+    const localComponentsService = new ComponentsServiceWithStubbedLoad(
+      context,
+      {
+        name: 'test-service',
+        services: {},
+      },
+      {}
+    );
+
+    await localComponentsService.init();
+    await localComponentsService.executeComponentsGraph({ method: 'deploy' });
+    await localComponentsService.instantiateComponents();
+
+    expect(loadComponent).to.not.have.been.called;
+  });
+
   it('rejects reserved component aliases in direct command invocation', async () => {
     const context = new Context({
       root: process.cwd(),
