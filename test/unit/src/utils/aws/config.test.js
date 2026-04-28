@@ -46,7 +46,8 @@ describe('test/unit/src/utils/aws/config.test.js', () => {
       this.options = options;
     }
 
-    function FakeHttpsProxyAgent(options) {
+    function FakeHttpsProxyAgent(proxy, options) {
+      this.proxy = proxy;
       this.options = options;
     }
 
@@ -58,7 +59,7 @@ describe('test/unit/src/utils/aws/config.test.js', () => {
 
     return proxyquire('../../../../../src/utils/aws/config', {
       '@smithy/node-http-handler': { NodeHttpHandler: FakeNodeHttpHandler },
-      'https-proxy-agent': FakeHttpsProxyAgent,
+      'https-proxy-agent': { HttpsProxyAgent: FakeHttpsProxyAgent },
       'https': { Agent: FakeHttpsAgent },
     });
   }
@@ -123,6 +124,17 @@ describe('test/unit/src/utils/aws/config.test.js', () => {
     });
   });
 
+  it('preserves explicit zero timeout config', async () => {
+    await withEnv(async () => {
+      process.env.AWS_CLIENT_TIMEOUT = '0';
+      const { buildClientConfig } = loadConfig();
+
+      const config = buildClientConfig();
+
+      expect(config.requestHandler.options).to.deep.equal({ requestTimeout: 0 });
+    });
+  });
+
   it('passes proxy and CA options when constructing the proxy agent', async () => {
     await withEnv(async () => {
       process.env.HTTPS_PROXY = 'https://proxy.example.com:1234';
@@ -131,9 +143,10 @@ describe('test/unit/src/utils/aws/config.test.js', () => {
 
       const config = buildClientConfig();
 
+      expect(config.requestHandler.options.httpsAgent.proxy).to.equal(
+        'https://proxy.example.com:1234'
+      );
       expect(config.requestHandler.options.httpsAgent.options).to.include({
-        protocol: 'https:',
-        host: 'proxy.example.com:1234',
         rejectUnauthorized: true,
       });
       expect(config.requestHandler.options.httpsAgent.options.ca).to.deep.equal(['certificate']);

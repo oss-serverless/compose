@@ -245,6 +245,68 @@ describe('test/unit/src/utils/aws/credentials.test.js', () => {
     });
   });
 
+  it('does not fallback when a malformed default profile is loaded from a tilde credentials path', async () => {
+    await withEnv(async () => {
+      process.env.AWS_SHARED_CREDENTIALS_FILE = '~/.aws/credentials';
+      const fallbackProvider = sinon.stub().resolves({
+        accessKeyId: 'fallbackAccessKeyId',
+        secretAccessKey: 'fallbackSecretAccessKey',
+      });
+      const fromIni = sinon
+        .stub()
+        .returns(sinon.stub().rejects(createUnresolvedProfileError('default')));
+      const fromNodeProviderChain = sinon.stub().returns(fallbackProvider);
+      const { getCredentialProvider } = loadCredentials({
+        files: {
+          [credentialsFilePath]: ['[default]', 'aws_access_key_id = accessKeyId'].join('\n'),
+        },
+        fromIni,
+        fromNodeProviderChain,
+      });
+
+      await expect(getCredentialProvider()()).to.be.rejectedWith(
+        'Could not resolve credentials using profile'
+      );
+      expect(fromIni.firstCall.args[0]).to.include({
+        filepath: credentialsFilePath,
+        configFilepath: configFilePath,
+      });
+      expect(fromNodeProviderChain).to.not.have.been.called;
+      expect(fallbackProvider).to.not.have.been.called;
+    });
+  });
+
+  it('does not fallback when a malformed default profile is loaded from a tilde config path', async () => {
+    await withEnv(async () => {
+      process.env.AWS_CONFIG_FILE = '~/.aws/config';
+      const fallbackProvider = sinon.stub().resolves({
+        accessKeyId: 'fallbackAccessKeyId',
+        secretAccessKey: 'fallbackSecretAccessKey',
+      });
+      const fromIni = sinon
+        .stub()
+        .returns(sinon.stub().rejects(createUnresolvedProfileError('default')));
+      const fromNodeProviderChain = sinon.stub().returns(fallbackProvider);
+      const { getCredentialProvider } = loadCredentials({
+        files: {
+          [configFilePath]: ['[profile default]', 'custom_field = value'].join('\n'),
+        },
+        fromIni,
+        fromNodeProviderChain,
+      });
+
+      await expect(getCredentialProvider()()).to.be.rejectedWith(
+        'Could not resolve credentials using profile'
+      );
+      expect(fromIni.firstCall.args[0]).to.include({
+        filepath: credentialsFilePath,
+        configFilepath: configFilePath,
+      });
+      expect(fromNodeProviderChain).to.not.have.been.called;
+      expect(fallbackProvider).to.not.have.been.called;
+    });
+  });
+
   it('does not fallback when AWS_DEFAULT_PROFILE is explicitly set but absent', async () => {
     await withEnv(async () => {
       process.env.AWS_DEFAULT_PROFILE = 'missing-default';
@@ -261,6 +323,98 @@ describe('test/unit/src/utils/aws/credentials.test.js', () => {
       await expect(getCredentialProvider()()).to.be.rejectedWith(
         'Could not resolve credentials using profile'
       );
+      expect(fromNodeProviderChain).to.not.have.been.called;
+      expect(fallbackProvider).to.not.have.been.called;
+    });
+  });
+
+  it('does not fallback when AWS_DEFAULT_PROFILE exists but is malformed', async () => {
+    await withEnv(async () => {
+      process.env.AWS_DEFAULT_PROFILE = 'custom-default';
+      const fallbackProvider = sinon.stub().resolves({
+        accessKeyId: 'fallbackAccessKeyId',
+        secretAccessKey: 'fallbackSecretAccessKey',
+      });
+      const fromIni = sinon
+        .stub()
+        .returns(sinon.stub().rejects(createUnresolvedProfileError('custom-default')));
+      const fromNodeProviderChain = sinon.stub().returns(fallbackProvider);
+      const { getCredentialProvider } = loadCredentials({
+        files: {
+          [credentialsFilePath]: ['[custom-default]', 'aws_access_key_id = accessKeyId'].join('\n'),
+        },
+        fromIni,
+        fromNodeProviderChain,
+      });
+
+      await expect(getCredentialProvider()()).to.be.rejectedWith(
+        'Could not resolve credentials using profile'
+      );
+      expect(fromIni.firstCall.args[0]).to.include({ profile: 'custom-default' });
+      expect(fromNodeProviderChain).to.not.have.been.called;
+      expect(fallbackProvider).to.not.have.been.called;
+    });
+  });
+
+  it('does not fallback when AWS_DEFAULT_PROFILE exists as a quoted config profile', async () => {
+    await withEnv(async () => {
+      process.env.AWS_DEFAULT_PROFILE = 'custom-default';
+      const fallbackProvider = sinon.stub().resolves({
+        accessKeyId: 'fallbackAccessKeyId',
+        secretAccessKey: 'fallbackSecretAccessKey',
+      });
+      const fromIni = sinon
+        .stub()
+        .returns(sinon.stub().rejects(createUnresolvedProfileError('custom-default')));
+      const fromNodeProviderChain = sinon.stub().returns(fallbackProvider);
+      const { getCredentialProvider } = loadCredentials({
+        files: {
+          [configFilePath]: ['[profile "custom-default"]', 'custom_field = value'].join('\n'),
+        },
+        fromIni,
+        fromNodeProviderChain,
+      });
+
+      await expect(getCredentialProvider()()).to.be.rejectedWith(
+        'Could not resolve credentials using profile'
+      );
+      expect(fromIni.firstCall.args[0]).to.include({ profile: 'custom-default' });
+      expect(fromNodeProviderChain).to.not.have.been.called;
+      expect(fallbackProvider).to.not.have.been.called;
+    });
+  });
+
+  it('does not fallback when AWS_DEFAULT_PROFILE exists as an SSO config profile', async () => {
+    await withEnv(async () => {
+      process.env.AWS_DEFAULT_PROFILE = 'custom-default';
+      const fallbackProvider = sinon.stub().resolves({
+        accessKeyId: 'fallbackAccessKeyId',
+        secretAccessKey: 'fallbackSecretAccessKey',
+      });
+      const originalError = Object.assign(new Error('SSO session has expired'), {
+        name: 'CredentialsProviderError',
+      });
+      const fromIni = sinon.stub().returns(sinon.stub().rejects(originalError));
+      const fromNodeProviderChain = sinon.stub().returns(fallbackProvider);
+      const { getCredentialProvider } = loadCredentials({
+        files: {
+          [configFilePath]: [
+            '[profile custom-default]',
+            'sso_session = my-sso',
+            'sso_account_id = 123456789012',
+            'sso_role_name = Admin',
+            '[sso-session my-sso]',
+            'sso_region = us-east-1',
+            'sso_start_url = https://example.awsapps.com/start',
+            'sso_registration_scopes = sso:account:access',
+          ].join('\n'),
+        },
+        fromIni,
+        fromNodeProviderChain,
+      });
+
+      await expect(getCredentialProvider()()).to.be.rejectedWith('SSO session has expired');
+      expect(fromIni.firstCall.args[0]).to.include({ profile: 'custom-default' });
       expect(fromNodeProviderChain).to.not.have.been.called;
       expect(fallbackProvider).to.not.have.been.called;
     });
