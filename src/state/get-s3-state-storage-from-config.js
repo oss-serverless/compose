@@ -20,19 +20,20 @@ const getS3StateStorageFromConfig = async (stateConfiguration, context) => {
 
   const configuredBucketName = getConfiguredStateBucketName(stateConfiguration);
   const region = configuredBucketName
-    ? await getStateBucketRegion(bucketName, stateConfiguration)
+    ? await getStateBucketRegion(bucketName, stateConfiguration, context)
     : 'us-east-1';
 
   const awsClientConfig = getAwsClientConfig({
     profile: stateConfiguration.profile,
     region,
+    stage: context.stage,
   });
 
   return new S3StateStorage({
     bucketName,
     stateKey,
     region,
-    credentials: awsClientConfig.credentials,
+    clientConfig: awsClientConfig,
   });
 };
 

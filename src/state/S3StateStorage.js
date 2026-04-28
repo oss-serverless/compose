@@ -7,6 +7,8 @@ const ServerlessError = require('../serverless-error');
 const BaseStateStorage = require('./BaseStateStorage');
 const normalizeState = require('./normalize-state');
 
+const getAwsErrorCode = (error) => error && (error.Code || error.code || error.name);
+
 class S3StateStorage extends BaseStateStorage {
   constructor(config = {}) {
     super();
@@ -17,7 +19,9 @@ class S3StateStorage extends BaseStateStorage {
     this.bucketName = config.bucketName;
     this.stateKey = config.stateKey;
 
-    this.s3Client = new S3({ region: this.region, credentials: config.credentials });
+    this.s3Client = new S3(
+      config.clientConfig || { region: this.region, credentials: config.credentials }
+    );
 
     this.writeRequestQueue = pLimit(1);
   }
@@ -36,7 +40,7 @@ class S3StateStorage extends BaseStateStorage {
         const readState = await streamToString(stateObjectFromS3.Body);
         this.state = normalizeState(JSON.parse(readState));
       } catch (e) {
-        if (e.Code === 'NoSuchKey') {
+        if (getAwsErrorCode(e) === 'NoSuchKey') {
           this.state = normalizeState({});
         } else {
           throw new ServerlessError(

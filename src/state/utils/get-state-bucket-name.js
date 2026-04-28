@@ -9,20 +9,22 @@ const remoteStateCloudFormationTemplate = require('./remote-state-cloudformation
 const ServerlessError = require('../../serverless-error');
 
 const COMPOSE_REMOTE_STATE_STACK_NAME = 'serverless-compose-state';
+const getAwsErrorCode = (error) => error && (error.Code || error.code || error.name);
 
-const getCloudFormationClient = (stateConfiguration = {}) => {
+const getCloudFormationClient = (stateConfiguration = {}, context = {}) => {
   // We are enforcing us-east-1 as the intention (that might change in the future if we find a good reason)
   // is to only create one such bucket across all regions in a single AWS Account
   return new CloudFormation(
     getAwsClientConfig({
       profile: stateConfiguration.profile,
       region: 'us-east-1',
+      stage: context.stage,
     })
   );
 };
 
 const monitorStackCreation = async (stackName, context, stateConfiguration) => {
-  const client = getCloudFormationClient(stateConfiguration);
+  const client = getCloudFormationClient(stateConfiguration, context);
   const describeStacksResponse = await client.describeStacks({ StackName: stackName });
   const status = describeStacksResponse.Stacks[0].StackStatus;
 
@@ -49,7 +51,7 @@ const monitorStackCreation = async (stackName, context, stateConfiguration) => {
  * @param {import('../../Context')} context
  */
 const ensureRemoteStateBucketStackExists = async (context, stateConfiguration) => {
-  const client = getCloudFormationClient(stateConfiguration);
+  const client = getCloudFormationClient(stateConfiguration, context);
   const templateBody = JSON.stringify(remoteStateCloudFormationTemplate);
 
   // TODO: REPLACE WITH PROGRESS
@@ -72,8 +74,8 @@ const ensureRemoteStateBucketStackExists = async (context, stateConfiguration) =
   return bucketName;
 };
 
-const getStateBucketNameFromCF = async (stateConfiguration) => {
-  const client = getCloudFormationClient(stateConfiguration);
+const getStateBucketNameFromCF = async (stateConfiguration, context) => {
+  const client = getCloudFormationClient(stateConfiguration, context);
   const logicalResourceId = 'ServerlessComposeRemoteStateBucket';
   const result = await client.describeStackResource({
     StackName: COMPOSE_REMOTE_STATE_STACK_NAME,
@@ -104,10 +106,10 @@ const getStateBucketName = async (stateConfiguration, context) => {
 
   // 2. Check from remote
   try {
-    return await getStateBucketNameFromCF(stateConfiguration);
+    return await getStateBucketNameFromCF(stateConfiguration, context);
   } catch (e) {
     // If message includes 'does not exist', we need to move forward and create the stack first
-    if (!(e.Code === 'ValidationError' && e.message.includes('does not exist'))) {
+    if (!(getAwsErrorCode(e) === 'ValidationError' && e.message.includes('does not exist'))) {
       throw new ServerlessError(
         `Could not retrieve S3 state bucket: ${e.message}`,
         'CANNOT_RETRIEVE_REMOTE_STATE_S3_BUCKET'

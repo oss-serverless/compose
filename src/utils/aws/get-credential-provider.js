@@ -1,14 +1,5 @@
 'use strict';
 
-const fromNodeProviderChain = require('./provider-chain/from-node-provider-chain');
+const { getCredentialProvider } = require('./credentials');
 
-module.exports = ({ profile, region } = {}) => {
-  if (process.env.AWS_DEFAULT_PROFILE && !process.env.AWS_PROFILE) {
-    process.env.AWS_PROFILE = process.env.AWS_DEFAULT_PROFILE;
-  }
-
-  return fromNodeProviderChain({
-    profile,
-    clientConfig: { region },
-  });
-};
+module.exports = ({ profile, stage } = {}) => getCredentialProvider({ profile, stage });

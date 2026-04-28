@@ -48,7 +48,7 @@ const runComponents = async (argv = process.argv.slice(2)) => {
   }
 
   method = args._;
-  if (!method) {
+  if (!method.length) {
     await renderHelp();
     return;
   }
@@ -64,6 +64,8 @@ const runComponents = async (argv = process.argv.slice(2)) => {
     method = methods.join(':');
   }
   delete options._; // remove the method name if any
+
+  validateOptions(options, method);
 
   const configurationPath = await resolveConfigurationPath(process.cwd());
   const configuration = await readConfiguration(configurationPath);
@@ -81,8 +83,6 @@ const runComponents = async (argv = process.argv.slice(2)) => {
 
   context = new Context(contextConfig);
   await context.init();
-
-  validateOptions(options, method);
 
   try {
     const componentsService = new ComponentsService(context, configuration, options);

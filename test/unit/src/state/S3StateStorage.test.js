@@ -95,6 +95,18 @@ describe('test/unit/src/state/S3StateStorage.test.js', () => {
     });
   });
 
+  it('gracefully handles SDK v3 NoSuchKey errors when state file in S3 is not present', async () => {
+    const s3StateStorage = new S3StateStorage({ bucketName, stateKey });
+    const getError = new Error();
+    getError.name = 'NoSuchKey';
+    const mockedS3Client = {
+      getObject: sinon.stub().rejects(getError),
+    };
+    s3StateStorage.s3Client = mockedS3Client;
+    const result = await s3StateStorage.readState();
+    expect(result).to.deep.equal({});
+  });
+
   it('rejects if error other than NoSuchKey has been reported when reading state from S3', async () => {
     const s3StateStorage = new S3StateStorage({ bucketName, stateKey });
     const mockedS3Client = {
@@ -135,7 +147,7 @@ describe('test/unit/src/state/S3StateStorage.test.js', () => {
     });
   });
 
-  it('passes region and credentials into the S3 client constructor', () => {
+  it('passes full client config into the S3 client constructor', () => {
     const S3 = sinon.stub().returns({});
     const S3StateStorageWithStubbedClient = proxyquire
       .noCallThru()
@@ -147,13 +159,18 @@ describe('test/unit/src/state/S3StateStorage.test.js', () => {
       bucketName,
       stateKey,
       region: 'eu-central-1',
-      credentials: 'creds',
+      clientConfig: {
+        region: 'eu-central-1',
+        credentials: 'creds',
+        retryMode: 'standard',
+      },
     });
 
     expect(stateStorage).to.be.instanceOf(S3StateStorageWithStubbedClient);
     expect(S3).to.have.been.calledOnceWithExactly({
       region: 'eu-central-1',
       credentials: 'creds',
+      retryMode: 'standard',
     });
   });
 

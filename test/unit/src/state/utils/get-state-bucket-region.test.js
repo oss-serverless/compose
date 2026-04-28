@@ -48,9 +48,31 @@ describe('test/unit/src/state/utils/get-state-bucket-region.test.js', () => {
     );
   });
 
+  it('rejects when SDK v3 reports bucket cannot be found by error name', async () => {
+    const bucketDoesNotExistError = new Error('No such bucket');
+    bucketDoesNotExistError.name = 'NoSuchBucket';
+
+    s3Mock.on(GetBucketLocationCommand).rejects(bucketDoesNotExistError);
+    await expect(getStateBucketRegion(bucketName)).to.be.eventually.rejected.and.have.property(
+      'code',
+      'CANNOT_FIND_PROVIDED_REMOTE_STATE_BUCKET'
+    );
+  });
+
   it('rejects when access to bucket is denied', async () => {
     const bucketCannotBeAccessedError = new Error('No such bucket');
     bucketCannotBeAccessedError.Code = 'AccessDenied';
+
+    s3Mock.on(GetBucketLocationCommand).rejects(bucketCannotBeAccessedError);
+    await expect(getStateBucketRegion(bucketName)).to.be.eventually.rejected.and.have.property(
+      'code',
+      'CANNOT_ACCESS_PROVIDED_REMOTE_STATE_BUCKET'
+    );
+  });
+
+  it('rejects when SDK v3 reports bucket access denial by error name', async () => {
+    const bucketCannotBeAccessedError = new Error('No such bucket');
+    bucketCannotBeAccessedError.name = 'AccessDenied';
 
     s3Mock.on(GetBucketLocationCommand).rejects(bucketCannotBeAccessedError);
     await expect(getStateBucketRegion(bucketName)).to.be.eventually.rejected.and.have.property(
@@ -73,6 +95,7 @@ describe('test/unit/src/state/utils/get-state-bucket-region.test.js', () => {
     const getAwsClientConfig = sinon.stub().returns({
       region: 'us-east-1',
       credentials: 'creds',
+      retryMode: 'standard',
     });
 
     const getStateBucketRegionWithStubs = proxyquire
@@ -82,13 +105,18 @@ describe('test/unit/src/state/utils/get-state-bucket-region.test.js', () => {
         '../../utils/aws': { getAwsClientConfig },
       });
 
-    expect(await getStateBucketRegionWithStubs(bucketName, { profile: 'team' })).to.equal(
-      'eu-central-1'
-    );
+    expect(
+      await getStateBucketRegionWithStubs(bucketName, { profile: 'team' }, { stage: 'prod' })
+    ).to.equal('eu-central-1');
     expect(getAwsClientConfig).to.have.been.calledOnceWithExactly({
       profile: 'team',
       region: 'us-east-1',
+      stage: 'prod',
     });
-    expect(S3).to.have.been.calledOnceWithExactly({ region: 'us-east-1', credentials: 'creds' });
+    expect(S3).to.have.been.calledOnceWithExactly({
+      region: 'us-east-1',
+      credentials: 'creds',
+      retryMode: 'standard',
+    });
   });
 });

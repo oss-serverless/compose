@@ -4,11 +4,14 @@ const { S3 } = require('@aws-sdk/client-s3');
 const { getAwsClientConfig } = require('../../utils/aws');
 const ServerlessError = require('../../serverless-error');
 
-const getStateBucketRegion = async (bucketName, stateConfiguration = {}) => {
+const getAwsErrorCode = (error) => error && (error.Code || error.code || error.name);
+
+const getStateBucketRegion = async (bucketName, stateConfiguration = {}, context = {}) => {
   const client = new S3(
     getAwsClientConfig({
       profile: stateConfiguration.profile,
       region: 'us-east-1',
+      stage: context.stage,
     })
   );
 
@@ -16,14 +19,16 @@ const getStateBucketRegion = async (bucketName, stateConfiguration = {}) => {
   try {
     result = await client.getBucketLocation({ Bucket: bucketName });
   } catch (e) {
-    if (e.Code === 'NoSuchBucket') {
+    const code = getAwsErrorCode(e);
+
+    if (code === 'NoSuchBucket') {
       throw new ServerlessError(
         `Provided bucket: "${bucketName}" could not be found.`,
         'CANNOT_FIND_PROVIDED_REMOTE_STATE_BUCKET'
       );
     }
 
-    if (e.Code === 'AccessDenied') {
+    if (code === 'AccessDenied') {
       throw new ServerlessError(
         `Access to provided bucket: "${bucketName}" has been denied.`,
         'CANNOT_ACCESS_PROVIDED_REMOTE_STATE_BUCKET'
