@@ -15,7 +15,8 @@ describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
     const getStateBucketName = sinon.stub().resolves('managed-bucket');
     const getConfiguredStateBucketName = sinon.stub().returns(null);
     const getStateBucketRegion = sinon.stub();
-    const getAwsClientConfig = sinon.stub().returns({ credentials: 'creds' });
+    const awsClientConfig = { region: 'us-east-1', credentials: 'creds', retryMode: 'standard' };
+    const getAwsClientConfig = sinon.stub().returns(awsClientConfig);
 
     class S3StateStorage {
       constructor(config) {
@@ -44,12 +45,13 @@ describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
     expect(getAwsClientConfig).to.have.been.calledOnceWithExactly({
       profile: 'team',
       region: 'us-east-1',
+      stage: 'prod',
     });
     expect(stateStorage.config).to.deep.equal({
       bucketName: 'managed-bucket',
       stateKey: 'custom/prod/state.json',
       region: 'us-east-1',
-      credentials: 'creds',
+      clientConfig: awsClientConfig,
     });
   });
 
@@ -62,7 +64,8 @@ describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
     const getStateBucketName = sinon.stub().resolves('provided-bucket');
     const getConfiguredStateBucketName = sinon.stub().returns('provided-bucket');
     const getStateBucketRegion = sinon.stub().resolves('eu-central-1');
-    const getAwsClientConfig = sinon.stub().returns({ credentials: 'creds' });
+    const awsClientConfig = { region: 'eu-central-1', credentials: 'creds', retryMode: 'standard' };
+    const getAwsClientConfig = sinon.stub().returns(awsClientConfig);
 
     class S3StateStorage {
       constructor(config) {
@@ -84,17 +87,19 @@ describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
 
     expect(getStateBucketRegion).to.have.been.calledOnceWithExactly(
       'provided-bucket',
-      stateConfiguration
+      stateConfiguration,
+      { stage: 'dev' }
     );
     expect(getAwsClientConfig).to.have.been.calledOnceWithExactly({
       profile: 'team',
       region: 'eu-central-1',
+      stage: 'dev',
     });
     expect(stateStorage.config).to.deep.equal({
       bucketName: 'provided-bucket',
       stateKey: 'dev/state.json',
       region: 'eu-central-1',
-      credentials: 'creds',
+      clientConfig: awsClientConfig,
     });
   });
 
@@ -107,7 +112,8 @@ describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
     const getStateBucketName = sinon.stub().resolves('provided-bucket');
     const getConfiguredStateBucketName = sinon.stub().returns('provided-bucket');
     const getStateBucketRegion = sinon.stub().resolves('eu-central-1');
-    const getAwsClientConfig = sinon.stub().returns({ credentials: 'creds' });
+    const awsClientConfig = { region: 'eu-central-1', credentials: 'creds', retryMode: 'standard' };
+    const getAwsClientConfig = sinon.stub().returns(awsClientConfig);
 
     class S3StateStorage {
       constructor(config) {
@@ -129,17 +135,19 @@ describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
 
     expect(getStateBucketRegion).to.have.been.calledOnceWithExactly(
       'provided-bucket',
-      stateConfiguration
+      stateConfiguration,
+      { stage: 'dev' }
     );
     expect(getAwsClientConfig).to.have.been.calledOnceWithExactly({
       profile: 'team',
       region: 'eu-central-1',
+      stage: 'dev',
     });
     expect(stateStorage.config).to.deep.equal({
       bucketName: 'provided-bucket',
       stateKey: 'dev/state.json',
       region: 'eu-central-1',
-      credentials: 'creds',
+      clientConfig: awsClientConfig,
     });
   });
 });

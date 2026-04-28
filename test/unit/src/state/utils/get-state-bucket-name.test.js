@@ -76,6 +76,23 @@ describe('test/unit/src/state/utils/get-state-bucket-name.test.js', () => {
     ).to.be.true;
   });
 
+  it('handles SDK v3 ValidationError names when bucket stack has to be created', async () => {
+    const configuration = { backend: 's3' };
+    const stackDoesNotExistError = new Error('Stack "test" does not exist');
+    stackDoesNotExistError.name = 'ValidationError';
+    cfMock
+      .on(DescribeStackResourceCommand)
+      .rejectsOnce(stackDoesNotExistError)
+      .on(CreateStackCommand)
+      .resolves()
+      .on(DescribeStacksCommand)
+      .resolves({ Stacks: [{ StackStatus: 'CREATE_COMPLETE' }] });
+
+    expect(
+      (await getStateBucketName(configuration, context)).startsWith('serverless-compose-state-')
+    ).to.be.true;
+  });
+
   it('handles unexpected error when resolving bucket from s3', async () => {
     const configuration = { backend: 's3' };
     const unknownError = new Error('unknown error');
@@ -113,6 +130,7 @@ describe('test/unit/src/state/utils/get-state-bucket-name.test.js', () => {
     const getAwsClientConfig = sinon.stub().returns({
       region: 'us-east-1',
       credentials: 'creds',
+      retryMode: 'standard',
     });
 
     const getStateBucketNameWithStubs = proxyquire
@@ -128,10 +146,12 @@ describe('test/unit/src/state/utils/get-state-bucket-name.test.js', () => {
     expect(getAwsClientConfig).to.have.been.calledOnceWithExactly({
       profile: 'team',
       region: 'us-east-1',
+      stage: 'dev',
     });
     expect(CloudFormation).to.have.been.calledOnceWithExactly({
       region: 'us-east-1',
       credentials: 'creds',
+      retryMode: 'standard',
     });
   });
 });
