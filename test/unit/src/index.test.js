@@ -31,6 +31,8 @@ describe('test/unit/src/index.test.js', () => {
   });
 
   const loadRunComponents = (componentsServiceInstances, validateOptions = sinon.stub()) => {
+    const contextInit = sinon.stub().resolves();
+    const contextInstances = [];
     class FakeContext {
       constructor(config) {
         this.root = config.root;
@@ -39,10 +41,11 @@ describe('test/unit/src/index.test.js', () => {
           log: sinon.stub(),
         };
         this.componentCommandsOutcomes = {};
+        contextInstances.push(this);
       }
 
       async init() {
-        return undefined;
+        return contextInit();
       }
 
       shutdown() {
@@ -54,34 +57,130 @@ describe('test/unit/src/index.test.js', () => {
     componentsServiceInstances.forEach((instance, index) => {
       ComponentsService.onCall(index).returns(instance);
     });
+    const renderHelp = sinon.stub().resolves();
+    const resolveConfigurationVariables = sinon.stub().resolves();
+    const resolveConfigurationPath = sinon.stub().resolves('serverless-compose.yml');
+    const readConfiguration = sinon.stub().resolves({
+      services: {
+        api: {
+          path: 'api',
+        },
+      },
+    });
+    const validateConfiguration = sinon.stub();
+    const handleError = sinon.stub();
+    const initializeNodeLogging = sinon.stub();
 
     const listenerSnapshot = snapshotListeners();
     listenerSnapshots.push(listenerSnapshot);
     delete require.cache[require.resolve('../../../src/index.js')];
     const { runComponents } = proxyquire.noCallThru().load('../../../src', {
       'signal-exit/signals': { signals: moduleSignals },
-      './render-help': sinon.stub().resolves(),
+      './render-help': renderHelp,
       './Context': FakeContext,
       './ComponentsService': ComponentsService,
-      './handle-error': sinon.stub(),
-      './configuration/resolve-variables': sinon.stub().resolves(),
-      './configuration/resolve-path': sinon.stub().resolves('serverless-compose.yml'),
-      './configuration/read': sinon.stub().resolves({
-        services: {
-          api: {
-            path: 'api',
-          },
-        },
-      }),
+      './handle-error': handleError,
+      './configuration/resolve-variables': resolveConfigurationVariables,
+      './configuration/resolve-path': resolveConfigurationPath,
+      './configuration/read': readConfiguration,
       './configuration/validate': {
-        validateConfiguration: sinon.stub(),
+        validateConfiguration,
       },
       './validate-options': validateOptions,
-      './utils/serverless-utils/log-reporters/node': sinon.stub(),
+      './utils/serverless-utils/log-reporters/node': initializeNodeLogging,
     });
 
-    return { runComponents, validateOptions };
+    return {
+      runComponents,
+      validateOptions,
+      ComponentsService,
+      contextInit,
+      contextInstances,
+      renderHelp,
+      resolveConfigurationVariables,
+      resolveConfigurationPath,
+      readConfiguration,
+      validateConfiguration,
+      handleError,
+      initializeNodeLogging,
+    };
   };
+
+  it('renders help for empty argv without resolving configuration', async () => {
+    const { runComponents, validateOptions, renderHelp, resolveConfigurationPath } =
+      loadRunComponents([]);
+
+    await runComponents([]);
+
+    expect(renderHelp).to.have.been.calledOnceWithExactly();
+    expect(validateOptions).to.not.have.been.called;
+    expect(resolveConfigurationPath).to.not.have.been.called;
+  });
+
+  it('renders help option without validating options or resolving configuration', async () => {
+    const { runComponents, validateOptions, renderHelp, resolveConfigurationPath } =
+      loadRunComponents([]);
+
+    await runComponents(['--help']);
+
+    expect(renderHelp).to.have.been.calledOnceWithExactly();
+    expect(validateOptions).to.not.have.been.called;
+    expect(resolveConfigurationPath).to.not.have.been.called;
+  });
+
+  it('rejects unsupported native options before configuration or state initialization', async () => {
+    const validateOptions = sinon.spy(require('../../../src/validate-options'));
+    const {
+      runComponents,
+      contextInit,
+      contextInstances,
+      resolveConfigurationPath,
+      readConfiguration,
+      resolveConfigurationVariables,
+      ComponentsService,
+    } = loadRunComponents([], validateOptions);
+
+    let caughtError;
+    try {
+      await runComponents(['deploy', '--aws-profile', 'prod']);
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).to.have.property('code', 'UNRECOGNIZED_CLI_OPTIONS');
+    expect(validateOptions).to.have.been.calledOnceWithExactly(
+      sinon.match({ 'aws-profile': 'prod' }),
+      'deploy'
+    );
+    expect(resolveConfigurationPath).to.not.have.been.called;
+    expect(readConfiguration).to.not.have.been.called;
+    expect(resolveConfigurationVariables).to.not.have.been.called;
+    expect(contextInstances).to.have.length(0);
+    expect(contextInit).to.not.have.been.called;
+    expect(ComponentsService).to.not.have.been.called;
+  });
+
+  it('rejects unsupported region option before configuration or state initialization', async () => {
+    const validateOptions = sinon.spy(require('../../../src/validate-options'));
+    const { runComponents, contextInit, contextInstances, resolveConfigurationPath } =
+      loadRunComponents([], validateOptions);
+
+    let caughtError;
+    try {
+      await runComponents(['deploy', '--region', 'eu-west-1']);
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).to.have.property('code', 'UNRECOGNIZED_CLI_OPTIONS');
+    expect(validateOptions).to.have.been.calledOnceWithExactly(
+      sinon.match({ region: 'eu-west-1' }),
+      'deploy'
+    );
+    expect(resolveConfigurationPath).to.not.have.been.called;
+    expect(contextInstances).to.have.length(0);
+    expect(contextInit).to.not.have.been.called;
+  });
 
   it('preserves nested shortcut service commands', async () => {
     const componentsServiceInstance = {
@@ -132,6 +231,34 @@ describe('test/unit/src/index.test.js', () => {
       'api',
       'invoke:local',
       sinon.match({ function: 'handler' })
+    );
+    expect(componentsServiceInstance.invokeGlobalCommand.called).to.equal(false);
+    expect(processExit).to.have.been.calledOnceWithExactly(0);
+  });
+
+  it('allows Framework options for nested passthrough commands after normalization', async () => {
+    const componentsServiceInstance = {
+      init: sinon.stub().resolves(),
+      invokeComponentCommand: sinon.stub().resolves(),
+      invokeGlobalCommand: sinon.stub().resolves(),
+      allComponents: {},
+    };
+    const validateOptions = sinon.spy(require('../../../src/validate-options'));
+    const { runComponents } = loadRunComponents([componentsServiceInstance], validateOptions);
+    const processExit = sinon.stub(process, 'exit');
+    sinon.stub(process, 'getMaxListeners').returns(10);
+    sinon.stub(process, 'setMaxListeners');
+
+    await runComponents(['api:deploy:function', '--region', 'eu-west-1', '--aws-profile', 'dev']);
+
+    expect(validateOptions).to.have.been.calledOnceWithExactly(
+      sinon.match({ 'region': 'eu-west-1', 'aws-profile': 'dev' }),
+      'deploy:function'
+    );
+    expect(componentsServiceInstance.invokeComponentCommand).to.have.been.calledOnceWithExactly(
+      'api',
+      'deploy:function',
+      sinon.match({ 'region': 'eu-west-1', 'aws-profile': 'dev' })
     );
     expect(componentsServiceInstance.invokeGlobalCommand.called).to.equal(false);
     expect(processExit).to.have.been.calledOnceWithExactly(0);
