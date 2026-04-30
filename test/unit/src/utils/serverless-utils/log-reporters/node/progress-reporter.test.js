@@ -31,7 +31,7 @@ describe('test/unit/src/utils/serverless-utils/log-reporters/node/progress-repor
       .load(
         '../../../../../../../src/utils/serverless-utils/lib/log-reporters/node/progress-reporter',
         {
-          'cli-progress-footer': sinon.stub().returns(cliProgressFooter),
+          '../../../../progress-footer': sinon.stub().returns(cliProgressFooter),
           '../../log/get-progress-reporter': {
             emitter: {
               on: sinon.stub().callsFake((eventName, handler) => {
