@@ -12,6 +12,7 @@ const readConfiguration = require('./configuration/read');
 const { validateConfiguration } = require('./configuration/validate');
 const validateOptions = require('./validate-options');
 const initializeNodeLogging = require('./utils/serverless-utils/log-reporters/node');
+const validateStage = require('./utils/validate-stage');
 const { signals } = require('signal-exit/signals');
 
 let options;
@@ -39,7 +40,7 @@ signals.forEach((signal) => {
 });
 
 const runComponents = async (argv = process.argv.slice(2)) => {
-  const args = minimist(argv);
+  const args = minimist(argv, { string: ['stage'] });
   initializeNodeLogging({ argv, env: process.env, stdin: process.stdin, stdout: process.stdout });
 
   if (args.help || args._[0] === 'help') {
@@ -67,11 +68,12 @@ const runComponents = async (argv = process.argv.slice(2)) => {
 
   validateOptions(options, method);
 
+  const stage = validateStage(options.stage ?? 'dev');
+
   const configurationPath = await resolveConfigurationPath(process.cwd());
   const configuration = await readConfiguration(configurationPath);
   validateConfiguration(configuration, configurationPath);
 
-  const stage = options.stage || 'dev';
   await resolveConfigurationVariables(configuration, configurationPath, stage);
 
   const contextConfig = {

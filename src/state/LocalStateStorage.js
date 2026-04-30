@@ -5,12 +5,17 @@ const utils = require('../utils/fs');
 const path = require('path');
 const fsp = require('fs').promises;
 const normalizeState = require('./normalize-state');
+const validateStage = require('../utils/validate-stage');
 
 class LocalStateStorage extends BaseStateStorage {
   constructor(root, stage) {
     super();
     this.stateRoot = path.join(root, '.serverless');
-    this.stage = stage;
+    this.stage = validateStage(stage);
+  }
+
+  getStateFilePath() {
+    return path.join(this.stateRoot, `state.${this.stage}.json`);
   }
 
   async readState() {
@@ -18,7 +23,7 @@ class LocalStateStorage extends BaseStateStorage {
     // We will assume it doesn't change outside of our process
     // TODO add locking mechanism in the future
     if (this.state === undefined) {
-      const stateFilePath = path.join(this.stateRoot, `state.${this.stage}.json`);
+      const stateFilePath = this.getStateFilePath();
       if (await utils.fileExists(stateFilePath)) {
         this.state = normalizeState(await utils.readFile(stateFilePath));
       } else {
@@ -29,12 +34,12 @@ class LocalStateStorage extends BaseStateStorage {
   }
 
   async writeState() {
-    const stateFilePath = path.join(this.stateRoot, `state.${this.stage}.json`);
+    const stateFilePath = this.getStateFilePath();
     await utils.writeFile(stateFilePath, this.state);
   }
 
   async removeState() {
-    const stateFilePath = path.join(this.stateRoot, `state.${this.stage}.json`);
+    const stateFilePath = this.getStateFilePath();
     await fsp.unlink(stateFilePath);
   }
 }

@@ -6,6 +6,7 @@ const S3StateStorage = require('./S3StateStorage');
 const getConfiguredStateBucketName = require('./utils/get-configured-state-bucket-name');
 const getStateBucketName = require('./utils/get-state-bucket-name');
 const getStateBucketRegion = require('./utils/get-state-bucket-region');
+const validateStage = require('../utils/validate-stage');
 
 /**
  * @param {Record<string, any>} stateConfiguration
@@ -13,9 +14,10 @@ const getStateBucketRegion = require('./utils/get-state-bucket-region');
  * @returns {Promise<S3StateStorage>}
  */
 const getS3StateStorageFromConfig = async (stateConfiguration, context) => {
+  const stage = validateStage(context.stage);
   const bucketName = await getStateBucketName(stateConfiguration, context);
   const stateKey = `${stateConfiguration.prefix ? `${stateConfiguration.prefix}/` : ''}${
-    context.stage
+    stage
   }/state.json`;
 
   const configuredBucketName = getConfiguredStateBucketName(stateConfiguration);
@@ -26,7 +28,7 @@ const getS3StateStorageFromConfig = async (stateConfiguration, context) => {
   const awsClientConfig = getAwsClientConfig({
     profile: stateConfiguration.profile,
     region,
-    stage: context.stage,
+    stage,
   });
 
   return new S3StateStorage({
