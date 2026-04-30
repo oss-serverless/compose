@@ -274,6 +274,34 @@ describe('test/unit/src/index.test.js', () => {
     expect(processExit).to.have.been.calledOnceWithExactly(0);
   });
 
+  for (const stage of ['123', '001']) {
+    it(`passes numeric-looking stage ${stage} as a string`, async () => {
+      const componentsServiceInstance = {
+        init: sinon.stub().resolves(),
+        invokeComponentCommand: sinon.stub().resolves(),
+        invokeGlobalCommand: sinon.stub().resolves(),
+        allComponents: {},
+      };
+      const { runComponents, contextInstances, resolveConfigurationVariables } = loadRunComponents([
+        componentsServiceInstance,
+      ]);
+      const processExit = sinon.stub(process, 'exit');
+      sinon.stub(process, 'getMaxListeners').returns(10);
+      sinon.stub(process, 'setMaxListeners');
+
+      await runComponents(['deploy', '--stage', stage]);
+
+      expect(resolveConfigurationVariables).to.have.been.calledOnceWithExactly(
+        sinon.match.object,
+        'serverless-compose.yml',
+        stage
+      );
+      expect(contextInstances).to.have.length(1);
+      expect(contextInstances[0].stage).to.equal(stage);
+      expect(processExit).to.have.been.calledOnceWithExactly(0);
+    });
+  }
+
   it('preserves nested shortcut service commands', async () => {
     const componentsServiceInstance = {
       init: sinon.stub().resolves(),

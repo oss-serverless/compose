@@ -4,7 +4,7 @@ const expect = require('chai').expect;
 const validateStage = require('../../../../src/utils/validate-stage');
 
 describe('test/unit/src/utils/validate-stage.test.js', () => {
-  for (const stage of ['dev', 'prod', 'prod-1', 'myStage', 'A1-b2', '-']) {
+  for (const stage of ['dev', 'prod', 'prod-1', 'myStage', 'A1-b2', '123', '001', '-']) {
     it(`accepts ${JSON.stringify(stage)}`, () => {
       expect(validateStage(stage)).to.equal(stage);
     });

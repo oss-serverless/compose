@@ -40,7 +40,7 @@ signals.forEach((signal) => {
 });
 
 const runComponents = async (argv = process.argv.slice(2)) => {
-  const args = minimist(argv);
+  const args = minimist(argv, { string: ['stage'] });
   initializeNodeLogging({ argv, env: process.env, stdin: process.stdin, stdout: process.stdout });
 
   if (args.help || args._[0] === 'help') {
