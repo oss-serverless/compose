@@ -150,4 +150,36 @@ describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
       clientConfig: awsClientConfig,
     });
   });
+
+  it('rejects invalid stage before composing S3 state key', async () => {
+    const getStateBucketName = sinon.stub();
+    const getConfiguredStateBucketName = sinon.stub();
+    const getStateBucketRegion = sinon.stub();
+    const getAwsClientConfig = sinon.stub();
+
+    class S3StateStorage {
+      constructor(config) {
+        this.config = config;
+      }
+    }
+
+    const getS3StateStorageFromConfig = proxyquire
+      .noCallThru()
+      .load('../../../../src/state/get-s3-state-storage-from-config', {
+        '../utils/aws': { getAwsClientConfig },
+        './S3StateStorage': S3StateStorage,
+        './utils/get-configured-state-bucket-name': getConfiguredStateBucketName,
+        './utils/get-state-bucket-name': getStateBucketName,
+        './utils/get-state-bucket-region': getStateBucketRegion,
+      });
+
+    await expect(
+      getS3StateStorageFromConfig({ backend: 's3' }, { stage: 'foo/../../tmp/x' })
+    ).to.be.eventually.rejected.and.have.property('code', 'INVALID_STAGE');
+
+    expect(getStateBucketName).to.not.have.been.called;
+    expect(getConfiguredStateBucketName).to.not.have.been.called;
+    expect(getStateBucketRegion).to.not.have.been.called;
+    expect(getAwsClientConfig).to.not.have.been.called;
+  });
 });

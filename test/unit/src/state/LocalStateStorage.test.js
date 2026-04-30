@@ -53,4 +53,24 @@ describe('test/unit/src/state/LocalStateStorage.test.js', () => {
       Object.getOwnPropertyDescriptor(state.components.service.outputs, '__proto__').value
     ).to.deep.equal({ value: 'ok' });
   });
+
+  for (const stage of ['foo/../../tmp/x', 'foo\\bar', 'feature.prod', 'my_stage', 'café', '']) {
+    it(`rejects invalid local state stage ${JSON.stringify(stage)}`, () => {
+      expect(() => new LocalStateStorage(rootDir, stage))
+        .to.throw()
+        .and.have.property('code', 'INVALID_STAGE');
+    });
+  }
+
+  it('uses validated stage in local state filename', async () => {
+    const storage = new LocalStateStorage(rootDir, 'prod-1');
+    storage.state = { service: { id: 'abc' } };
+
+    await storage.writeState();
+
+    const statePath = path.join(rootDir, '.serverless', 'state.prod-1.json');
+    expect(JSON.parse(await fsp.readFile(statePath, 'utf8'))).to.deep.equal({
+      service: { id: 'abc' },
+    });
+  });
 });

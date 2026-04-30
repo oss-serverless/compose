@@ -182,6 +182,98 @@ describe('test/unit/src/index.test.js', () => {
     expect(contextInit).to.not.have.been.called;
   });
 
+  it('rejects invalid stage before configuration or state initialization', async () => {
+    const validateOptions = sinon.spy(require('../../../src/validate-options'));
+    const {
+      runComponents,
+      contextInit,
+      contextInstances,
+      resolveConfigurationPath,
+      readConfiguration,
+      resolveConfigurationVariables,
+      ComponentsService,
+    } = loadRunComponents([], validateOptions);
+
+    let caughtError;
+    try {
+      await runComponents(['deploy', '--stage', 'foo/../../tmp/x']);
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).to.have.property('code', 'INVALID_STAGE');
+    expect(validateOptions).to.have.been.calledOnceWithExactly(
+      sinon.match({ stage: 'foo/../../tmp/x' }),
+      'deploy'
+    );
+    expect(resolveConfigurationPath).to.not.have.been.called;
+    expect(readConfiguration).to.not.have.been.called;
+    expect(resolveConfigurationVariables).to.not.have.been.called;
+    expect(contextInstances).to.have.length(0);
+    expect(contextInit).to.not.have.been.called;
+    expect(ComponentsService).to.not.have.been.called;
+  });
+
+  it('rejects missing stage value before configuration or state initialization', async () => {
+    const { runComponents, resolveConfigurationPath, contextInit, contextInstances } =
+      loadRunComponents([]);
+
+    let caughtError;
+    try {
+      await runComponents(['deploy', '--stage']);
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).to.have.property('code', 'INVALID_STAGE');
+    expect(resolveConfigurationPath).to.not.have.been.called;
+    expect(contextInstances).to.have.length(0);
+    expect(contextInit).to.not.have.been.called;
+  });
+
+  it('rejects repeated stage values before configuration or state initialization', async () => {
+    const { runComponents, resolveConfigurationPath, contextInit, contextInstances } =
+      loadRunComponents([]);
+
+    let caughtError;
+    try {
+      await runComponents(['deploy', '--stage', 'dev', '--stage', 'prod']);
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).to.have.property('code', 'INVALID_STAGE');
+    expect(resolveConfigurationPath).to.not.have.been.called;
+    expect(contextInstances).to.have.length(0);
+    expect(contextInit).to.not.have.been.called;
+  });
+
+  it('passes validated stage to configuration resolution and context', async () => {
+    const componentsServiceInstance = {
+      init: sinon.stub().resolves(),
+      invokeComponentCommand: sinon.stub().resolves(),
+      invokeGlobalCommand: sinon.stub().resolves(),
+      allComponents: {},
+    };
+    const { runComponents, contextInstances, resolveConfigurationVariables } = loadRunComponents([
+      componentsServiceInstance,
+    ]);
+    const processExit = sinon.stub(process, 'exit');
+    sinon.stub(process, 'getMaxListeners').returns(10);
+    sinon.stub(process, 'setMaxListeners');
+
+    await runComponents(['deploy', '--stage', 'prod-1']);
+
+    expect(resolveConfigurationVariables).to.have.been.calledOnceWithExactly(
+      sinon.match.object,
+      'serverless-compose.yml',
+      'prod-1'
+    );
+    expect(contextInstances).to.have.length(1);
+    expect(contextInstances[0].stage).to.equal('prod-1');
+    expect(processExit).to.have.been.calledOnceWithExactly(0);
+  });
+
   it('preserves nested shortcut service commands', async () => {
     const componentsServiceInstance = {
       init: sinon.stub().resolves(),
