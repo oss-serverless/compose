@@ -1,10 +1,10 @@
 'use strict';
 
-const fse = require('fs-extra');
+const fs = require('node:fs').promises;
 const parseFile = require('./parseFile');
 
 const readFile = async (filePath, options = {}) => {
-  const contents = await fse.readFile(filePath, 'utf8');
+  const contents = await fs.readFile(filePath, 'utf8');
   return parseFile(filePath, contents, options);
 };
 

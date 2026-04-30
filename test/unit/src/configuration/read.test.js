@@ -6,8 +6,8 @@ const expect = chai.expect;
 
 const path = require('path');
 const fsp = require('fs').promises;
-const fse = require('fs-extra');
 const readConfiguration = require('../../../../src/configuration/read');
+const { ensureDir, remove } = require('../../../lib/fs');
 
 describe('test/unit/src/configuration/read.test.js', () => {
   let configurationPath;
@@ -62,7 +62,7 @@ describe('test/unit/src/configuration/read.test.js', () => {
   });
 
   it('should read "serverless-compose.ts"', async () => {
-    await fse.ensureDir('node_modules');
+    await ensureDir('node_modules');
     try {
       await fsp.writeFile('node_modules/ts-node.js', 'module.exports.register = () => null;');
       configurationPath = 'serverless-compose.ts';
@@ -73,7 +73,7 @@ describe('test/unit/src/configuration/read.test.js', () => {
       await fsp.writeFile(configurationPath, `module.exports = ${JSON.stringify(configuration)}`);
       expect(await readConfiguration(path.resolve(configurationPath))).to.deep.equal(configuration);
     } finally {
-      await fse.remove('node_modules');
+      await remove('node_modules');
     }
   });
 
