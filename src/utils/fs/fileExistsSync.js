@@ -1,10 +1,10 @@
 'use strict';
 
-const fse = require('fs-extra');
+const fs = require('node:fs');
 
 const fileExistsSync = (filePath) => {
   try {
-    const stats = fse.lstatSync(filePath);
+    const stats = fs.lstatSync(filePath);
     return stats.isFile();
   } catch {
     return false;

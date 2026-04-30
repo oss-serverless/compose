@@ -3,10 +3,10 @@
 const fs = require('node:fs').promises;
 const os = require('node:os');
 const path = require('node:path');
-const fse = require('fs-extra');
 const { expect } = require('chai');
 
 const resolveConfigurationPath = require('../../../../src/configuration/resolve-path');
+const { ensureDir, outputFile, remove } = require('../../../lib/fs');
 
 describe('test/unit/src/configuration/resolve-path.test.js', () => {
   let tmpDir;
@@ -16,7 +16,7 @@ describe('test/unit/src/configuration/resolve-path.test.js', () => {
   });
 
   afterEach(async () => {
-    await fse.remove(tmpDir);
+    await remove(tmpDir);
   });
 
   it('resolves the first existing compose config by supported extension order', async () => {
@@ -24,18 +24,18 @@ describe('test/unit/src/configuration/resolve-path.test.js', () => {
     const jsonPath = path.join(tmpDir, 'serverless-compose.json');
     const ymlPath = path.join(tmpDir, 'serverless-compose.yml');
 
-    await fse.outputFile(jsonPath, '{}');
-    await fse.outputFile(yamlPath, 'services: {}\n');
+    await outputFile(jsonPath, '{}');
+    await outputFile(yamlPath, 'services: {}\n');
 
     expect(await resolveConfigurationPath(tmpDir)).to.equal(yamlPath);
 
-    await fse.outputFile(ymlPath, 'services: {}\n');
+    await outputFile(ymlPath, 'services: {}\n');
 
     expect(await resolveConfigurationPath(tmpDir)).to.equal(ymlPath);
   });
 
   it('ignores directories named like compose config files', async () => {
-    await fse.ensureDir(path.join(tmpDir, 'serverless-compose.yml'));
+    await ensureDir(path.join(tmpDir, 'serverless-compose.yml'));
 
     await expect(resolveConfigurationPath(tmpDir)).to.eventually.be.rejected.and.have.property(
       'code',

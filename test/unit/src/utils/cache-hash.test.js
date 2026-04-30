@@ -5,11 +5,11 @@ const crypto = require('node:crypto');
 const os = require('node:os');
 const path = require('node:path');
 const proxyquire = require('proxyquire');
-const fse = require('fs-extra');
 const { expect } = require('chai');
 const sinon = require('sinon');
 
 const calculateCacheHash = require('../../../../src/utils/cache-hash');
+const { outputFile, remove } = require('../../../lib/fs');
 
 const md5Hex = (input) => crypto.createHash('md5').update(input).digest('hex');
 
@@ -29,12 +29,12 @@ describe('test/unit/src/utils/cache-hash.test.js', () => {
   });
 
   afterEach(async () => {
-    await fse.remove(tmpDir);
+    await remove(tmpDir);
   });
 
   it('calculates the md5 cache hash contract for a single file', async () => {
     const contents = 'module.exports = 1;\n';
-    await fse.outputFile(path.join(tmpDir, 'handler.js'), contents);
+    await outputFile(path.join(tmpDir, 'handler.js'), contents);
 
     expect(await calculateCacheHash(['handler.js'], tmpDir)).to.equal(
       md5Hex(md5Hex(Buffer.from(contents)))
@@ -43,9 +43,9 @@ describe('test/unit/src/utils/cache-hash.test.js', () => {
 
   it('calculates cache hashes independently of cache pattern order', async () => {
     await Promise.all([
-      fse.outputFile(path.join(tmpDir, 'a.txt'), 'aaa\n'),
-      fse.outputFile(path.join(tmpDir, 'b.txt'), 'bbb\n'),
-      fse.outputFile(path.join(tmpDir, 'c.txt'), 'ccc\n'),
+      outputFile(path.join(tmpDir, 'a.txt'), 'aaa\n'),
+      outputFile(path.join(tmpDir, 'b.txt'), 'bbb\n'),
+      outputFile(path.join(tmpDir, 'c.txt'), 'ccc\n'),
     ]);
 
     const expected = expectedCacheHashForContents(['aaa\n', 'bbb\n', 'ccc\n']);
@@ -61,8 +61,8 @@ describe('test/unit/src/utils/cache-hash.test.js', () => {
     const [lowerHashEntry, higherHashEntry] = contentsByHash;
 
     await Promise.all([
-      fse.outputFile(path.join(tmpDir, 'a.txt'), higherHashEntry.contents),
-      fse.outputFile(path.join(tmpDir, 'z.txt'), lowerHashEntry.contents),
+      outputFile(path.join(tmpDir, 'a.txt'), higherHashEntry.contents),
+      outputFile(path.join(tmpDir, 'z.txt'), lowerHashEntry.contents),
     ]);
 
     const expected = md5Hex([lowerHashEntry.hash, higherHashEntry.hash].join());
@@ -74,8 +74,8 @@ describe('test/unit/src/utils/cache-hash.test.js', () => {
 
   it('counts duplicate file contents when calculating cache hashes', async () => {
     await Promise.all([
-      fse.outputFile(path.join(tmpDir, 'one.txt'), 'same\n'),
-      fse.outputFile(path.join(tmpDir, 'two.txt'), 'same\n'),
+      outputFile(path.join(tmpDir, 'one.txt'), 'same\n'),
+      outputFile(path.join(tmpDir, 'two.txt'), 'same\n'),
     ]);
 
     const fileHash = md5Hex(Buffer.from('same\n'));
@@ -90,20 +90,20 @@ describe('test/unit/src/utils/cache-hash.test.js', () => {
     const otherDir = await fs.mkdtemp(path.join(os.tmpdir(), 'compose-cache-hash-other-'));
 
     try {
-      await fse.outputFile(path.join(tmpDir, 'one.txt'), 'content\n');
-      await fse.outputFile(path.join(otherDir, 'nested', 'different-name.js'), 'content\n');
+      await outputFile(path.join(tmpDir, 'one.txt'), 'content\n');
+      await outputFile(path.join(otherDir, 'nested', 'different-name.js'), 'content\n');
 
       expect(await calculateCacheHash(['one.txt'], tmpDir)).to.equal(
         await calculateCacheHash(['nested/different-name.js'], otherDir)
       );
     } finally {
-      await fse.remove(otherDir);
+      await remove(otherDir);
     }
   });
 
   it('hashes binary cache pattern files as raw bytes', async () => {
     const contents = Buffer.from([0x00, 0xff, 0x80, 0x0a]);
-    await fse.outputFile(path.join(tmpDir, 'binary.bin'), contents);
+    await outputFile(path.join(tmpDir, 'binary.bin'), contents);
 
     expect(await calculateCacheHash(['binary.bin'], tmpDir)).to.equal(
       expectedCacheHashForContents([contents])
@@ -117,7 +117,7 @@ describe('test/unit/src/utils/cache-hash.test.js', () => {
   });
 
   it('includes empty files in cache hashes', async () => {
-    await fse.outputFile(path.join(tmpDir, 'empty.txt'), '');
+    await outputFile(path.join(tmpDir, 'empty.txt'), '');
 
     const actual = await calculateCacheHash(['empty.txt'], tmpDir);
 
@@ -127,8 +127,8 @@ describe('test/unit/src/utils/cache-hash.test.js', () => {
 
   it('uses comma-separated file hashes for the aggregate cache hash', async () => {
     await Promise.all([
-      fse.outputFile(path.join(tmpDir, 'a.txt'), 'a'),
-      fse.outputFile(path.join(tmpDir, 'b.txt'), 'b'),
+      outputFile(path.join(tmpDir, 'a.txt'), 'a'),
+      outputFile(path.join(tmpDir, 'b.txt'), 'b'),
     ]);
 
     const hashes = [md5Hex(Buffer.from('a')), md5Hex(Buffer.from('b'))].sort();

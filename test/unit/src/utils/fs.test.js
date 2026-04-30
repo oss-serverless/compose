@@ -1,24 +1,26 @@
 'use strict';
 
-const fs = require('node:fs').promises;
+const fs = require('node:fs');
+const fsp = fs.promises;
 const os = require('node:os');
 const path = require('node:path');
-const fse = require('fs-extra');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const { expect } = require('chai');
 
 const utilsFs = require('../../../../src/utils/fs');
+const { ensureDir, outputFile, outputFileSync, remove, removeSync } = require('../../../lib/fs');
+const skipOnDisabledSymlinksInWindows = require('../../../lib/skip-on-disabled-symlinks-in-windows');
 
 describe('test/unit/src/utils/fs.test.js', () => {
   let tmpDir;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'compose-fs-'));
+    tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'compose-fs-'));
   });
 
   afterEach(async () => {
-    await fse.remove(tmpDir);
+    await remove(tmpDir);
   });
 
   it('detects JSON paths by exact lowercase suffix', () => {
@@ -42,12 +44,41 @@ describe('test/unit/src/utils/fs.test.js', () => {
     const dirPath = path.join(tmpDir, 'directory');
     const missingPath = path.join(tmpDir, 'missing.txt');
 
-    await fse.outputFile(filePath, 'content');
-    await fse.ensureDir(dirPath);
+    await outputFile(filePath, 'content');
+    await ensureDir(dirPath);
 
     expect(await utilsFs.fileExists(filePath)).to.equal(true);
     expect(await utilsFs.fileExists(dirPath)).to.equal(false);
     expect(await utilsFs.fileExists(missingPath)).to.equal(false);
+  });
+
+  it('checks sync existence only for regular files', () => {
+    const filePath = path.join(tmpDir, 'file.txt');
+    const dirPath = path.join(tmpDir, 'directory');
+    const missingPath = path.join(tmpDir, 'missing.txt');
+
+    outputFileSync(filePath, 'content');
+    fs.mkdirSync(dirPath);
+
+    expect(utilsFs.fileExistsSync(filePath)).to.equal(true);
+    expect(utilsFs.fileExistsSync(dirPath)).to.equal(false);
+    expect(utilsFs.fileExistsSync(missingPath)).to.equal(false);
+  });
+
+  it('does not treat symlinks to files as files', async function () {
+    const filePath = path.join(tmpDir, 'file.txt');
+    const linkPath = path.join(tmpDir, 'link.txt');
+
+    await outputFile(filePath, 'content');
+    try {
+      await fsp.symlink(filePath, linkPath);
+    } catch (error) {
+      skipOnDisabledSymlinksInWindows(error, this, () => removeSync(tmpDir));
+      throw error;
+    }
+
+    expect(await utilsFs.fileExists(linkPath)).to.equal(false);
+    expect(utilsFs.fileExistsSync(linkPath)).to.equal(false);
   });
 
   it('parses JSON, YAML, slsignore, and plain text contents', () => {
@@ -144,7 +175,7 @@ describe('test/unit/src/utils/fs.test.js', () => {
     const filePath = path.join(tmpDir, 'config.yml');
     const options = { custom: true };
 
-    await fse.outputFile(filePath, 'name: test\n');
+    await outputFile(filePath, 'name: test\n');
 
     expect(await readFile(filePath, options)).to.deep.equal({ parsed: true });
     expect(parseFile).to.have.been.calledOnce;
@@ -159,7 +190,7 @@ describe('test/unit/src/utils/fs.test.js', () => {
     const filePath = path.join(tmpDir, 'config.yml');
     const options = { custom: true };
 
-    fse.outputFileSync(filePath, 'name: test\n');
+    outputFileSync(filePath, 'name: test\n');
 
     expect(readFileSync(filePath, options)).to.deep.equal({ parsed: true });
     expect(parseFile).to.have.been.calledOnce;
@@ -175,8 +206,16 @@ describe('test/unit/src/utils/fs.test.js', () => {
     await utilsFs.writeFile(yamlPath, { a: 1 });
     await utilsFs.writeFile(textPath, 'raw text');
 
-    expect(await fs.readFile(jsonPath, 'utf8')).to.equal(JSON.stringify({ a: 1 }, null, 2));
-    expect(await fs.readFile(yamlPath, 'utf8')).to.equal('a: 1\n');
-    expect(await fs.readFile(textPath, 'utf8')).to.equal('raw text');
+    expect(await fsp.readFile(jsonPath, 'utf8')).to.equal(JSON.stringify({ a: 1 }, null, 2));
+    expect(await fsp.readFile(yamlPath, 'utf8')).to.equal('a: 1\n');
+    expect(await fsp.readFile(textPath, 'utf8')).to.equal('raw text');
+  });
+
+  it('writes files in nested directories', async () => {
+    const filePath = path.join(tmpDir, 'nested', 'state.json');
+
+    await utilsFs.writeFile(filePath, { a: 1 });
+
+    expect(await fsp.readFile(filePath, 'utf8')).to.equal(JSON.stringify({ a: 1 }, null, 2));
   });
 });

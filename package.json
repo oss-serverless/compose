@@ -34,7 +34,6 @@
     "event-emitter": "^0.3.5",
     "ext": "^1.7.0",
     "fast-glob": "^3.3.3",
-    "fs-extra": "^11.3.4",
     "https-proxy-agent": "^9.0.0",
     "js-yaml": "^4.1.0",
     "log": "^6.3.1",

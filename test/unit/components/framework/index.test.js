@@ -4,13 +4,13 @@ const fs = require('node:fs').promises;
 const path = require('path');
 const proxyquire = require('proxyquire');
 const chai = require('chai');
-const fse = require('fs-extra');
 const sinon = require('sinon');
 const Context = require('../../../../src/Context');
 const ComponentContext = require('../../../../src/ComponentContext');
 const { validateComponentInputs } = require('../../../../src/configuration/validate');
 const { configSchema } = require('../../../../components/framework/configuration');
 const ServerlessFramework = require('../../../../components/framework');
+const { outputFile, remove } = require('../../../lib/fs');
 
 const expect = chai.expect;
 
@@ -836,7 +836,7 @@ describe('test/unit/components/framework/index.test.js', () => {
     const serviceDir = await fs.mkdtemp(path.join(process.cwd(), 'cache-hash-skip-'));
 
     try {
-      await fse.outputFile(path.join(serviceDir, 'handler.js'), 'module.exports = 1;\n');
+      await outputFile(path.join(serviceDir, 'handler.js'), 'module.exports = 1;\n');
 
       const spawnStub = sinon.stub();
       const FrameworkComponent = proxyquire('../../../../components/framework/index.js', {
@@ -857,7 +857,7 @@ describe('test/unit/components/framework/index.test.js', () => {
 
       expect(spawnStub).to.not.have.been.called;
     } finally {
-      await fse.remove(serviceDir);
+      await remove(serviceDir);
     }
   });
 
@@ -866,7 +866,7 @@ describe('test/unit/components/framework/index.test.js', () => {
 
     try {
       const filePath = path.join(serviceDir, 'handler.js');
-      await fse.outputFile(filePath, 'module.exports = 1;\n');
+      await outputFile(filePath, 'module.exports = 1;\n');
 
       const spawnStub = sinon.stub();
       spawnStub.onFirstCall().returns(createSpawnExecution({ stderr: 'deployed' }));
@@ -891,14 +891,14 @@ describe('test/unit/components/framework/index.test.js', () => {
       context.state.inputs = inputs;
       context.state.cacheHash = await component.calculateCacheHash();
 
-      await fse.outputFile(filePath, 'module.exports = 2;\n');
+      await outputFile(filePath, 'module.exports = 2;\n');
 
       await component.deploy();
 
       expect(spawnStub).to.be.calledTwice;
       expect(context.state.cacheHash).to.equal(await component.calculateCacheHash());
     } finally {
-      await fse.remove(serviceDir);
+      await remove(serviceDir);
     }
   });
 
@@ -906,7 +906,7 @@ describe('test/unit/components/framework/index.test.js', () => {
     const serviceDir = await fs.mkdtemp(path.join(process.cwd(), 'cache-hash-dir-'));
 
     try {
-      await fse.outputFile(path.join(serviceDir, 'src', 'handler.js'), 'module.exports = 1;\n');
+      await outputFile(path.join(serviceDir, 'src', 'handler.js'), 'module.exports = 1;\n');
 
       const context = await getContext();
       const directoryPatternComponent = new ServerlessFramework('id', context, {
@@ -922,7 +922,7 @@ describe('test/unit/components/framework/index.test.js', () => {
         await globPatternComponent.calculateCacheHash()
       );
     } finally {
-      await fse.remove(serviceDir);
+      await remove(serviceDir);
     }
   });
 
@@ -931,9 +931,9 @@ describe('test/unit/components/framework/index.test.js', () => {
 
     try {
       await Promise.all([
-        fse.outputFile(path.join(serviceDir, 'keep.js'), 'keep\n'),
-        fse.outputFile(path.join(serviceDir, 'ignored', 'drop.js'), 'drop\n'),
-        fse.outputFile(path.join(serviceDir, 'ignored', 'reinclude.js'), 'reinclude\n'),
+        outputFile(path.join(serviceDir, 'keep.js'), 'keep\n'),
+        outputFile(path.join(serviceDir, 'ignored', 'drop.js'), 'drop\n'),
+        outputFile(path.join(serviceDir, 'ignored', 'reinclude.js'), 'reinclude\n'),
       ]);
 
       const context = await getContext();
@@ -950,7 +950,7 @@ describe('test/unit/components/framework/index.test.js', () => {
         await explicitPatternComponent.calculateCacheHash()
       );
     } finally {
-      await fse.remove(serviceDir);
+      await remove(serviceDir);
     }
   });
 });
