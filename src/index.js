@@ -28,7 +28,7 @@ process.once('uncaughtException', (error) => {
 
 signals.forEach((signal) => {
   process.once(signal, () => {
-    // If there's another listener (e.g. we're in deamon context or reading stdin input)
+    // If there's another listener (e.g. we're in daemon context or reading stdin input)
     // then let the other listener decide how process will exit
     const isOtherSigintListener = Boolean(process.listenerCount(signal));
     if (isOtherSigintListener) return;

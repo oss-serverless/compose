@@ -260,7 +260,7 @@ class ComponentsService {
     this.context.output.log();
     this.context.output.log(`Deploying to stage ${this.context.stage}`);
 
-    // Pre-emptively add all components to the progress list
+    // Preemptively add all components to the progress list
     Object.keys(this.allComponents).forEach((componentName) => {
       this.context.progresses.add(componentName);
     });
@@ -280,7 +280,7 @@ class ComponentsService {
     this.context.output.log();
     this.context.output.log(`Removing stage ${this.context.stage}`);
 
-    // Pre-emptively add all components to the progress list
+    // Preemptively add all components to the progress list
     Object.keys(this.allComponents).forEach((componentName) => {
       this.context.progresses.add(componentName);
     });
