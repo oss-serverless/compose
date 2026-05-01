@@ -1,10 +1,10 @@
 'use strict';
 
 const ensureString = require('type/string/ensure');
-const d = require('d');
 const memoizee = require('memoizee');
 const logLevels = require('log/levels');
 const uniGlobal = require('uni-global')('serverless/serverless/202110');
+const { getterDescriptor } = require('../property-descriptors');
 const getOutputReporter = require('./lib/log/get-output-reporter');
 const getProgressReporter = require('./lib/log/get-progress-reporter');
 
@@ -17,16 +17,16 @@ module.exports.log = log;
 
 if (!log.verbose) {
   Object.defineProperties(log, {
-    success: d.gs(function () {
+    success: getterDescriptor(function () {
       return this.notice;
     }),
-    skip: d.gs(function () {
+    skip: getterDescriptor(function () {
       return this.notice;
     }),
   });
 
   Object.defineProperties(log, {
-    verbose: d.gs(function () {
+    verbose: getterDescriptor(function () {
       return this.info;
     }),
   });
@@ -34,11 +34,11 @@ if (!log.verbose) {
 
 const defaultLogLevelIndex = logLevels.indexOf('notice');
 Object.defineProperties(module.exports, {
-  logLevelIndex: d.gs(() => {
+  logLevelIndex: getterDescriptor(() => {
     return uniGlobal.logLevelIndex == null ? defaultLogLevelIndex : uniGlobal.logLevelIndex;
   }),
-  isVerboseMode: d.gs(() => module.exports.logLevelIndex > defaultLogLevelIndex),
-  isInteractive: d.gs(() => {
+  isVerboseMode: getterDescriptor(() => module.exports.logLevelIndex > defaultLogLevelIndex),
+  isInteractive: getterDescriptor(() => {
     return uniGlobal.logIsInteractive == null ? false : uniGlobal.logIsInteractive;
   }),
 });
