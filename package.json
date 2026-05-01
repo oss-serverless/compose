@@ -30,8 +30,6 @@
     "ajv": "^8.11.0",
     "cli-cursor": "^5.0.0",
     "cross-spawn": "^7.0.6",
-    "d": "^1.0.1",
-    "event-emitter": "^0.3.5",
     "ext": "^1.7.0",
     "fast-glob": "^3.3.3",
     "https-proxy-agent": "^9.0.0",

@@ -61,6 +61,75 @@ describe('test/unit/src/utils/safe-object.test.js', () => {
     expect(getOwnByPath(source, ['nested', '__proto__', 'value'])).to.equal('ok');
   });
 
+  it('defines unsafe keys with pollution-robust own data descriptors', () => {
+    const target = {};
+    const originalGetDescriptor = Object.getOwnPropertyDescriptor(Object.prototype, 'get');
+    const originalSetDescriptor = Object.getOwnPropertyDescriptor(Object.prototype, 'set');
+
+    const definePollutingAccessor = (key) => {
+      Object.defineProperty(
+        Object.prototype,
+        key,
+        Object.assign(Object.create(null), {
+          get() {
+            throw new Error(`inherited descriptor ${key} was read`);
+          },
+          configurable: true,
+        })
+      );
+    };
+
+    let protoDescriptor;
+    let constructorDescriptor;
+    let prototypeDescriptor;
+
+    try {
+      definePollutingAccessor('get');
+      definePollutingAccessor('set');
+
+      safeSet(target, '__proto__', { polluted: 'no' });
+      safeSet(target, 'constructor', 'ctor');
+      safeSet(target, 'prototype', 'proto');
+
+      protoDescriptor = Object.getOwnPropertyDescriptor(target, '__proto__');
+      constructorDescriptor = Object.getOwnPropertyDescriptor(target, 'constructor');
+      prototypeDescriptor = Object.getOwnPropertyDescriptor(target, 'prototype');
+    } finally {
+      if (originalGetDescriptor) {
+        Object.defineProperty(Object.prototype, 'get', originalGetDescriptor);
+      } else {
+        delete Object.prototype.get;
+      }
+
+      if (originalSetDescriptor) {
+        Object.defineProperty(Object.prototype, 'set', originalSetDescriptor);
+      } else {
+        delete Object.prototype.set;
+      }
+    }
+
+    expect(Object.getPrototypeOf(target)).to.equal(Object.prototype);
+    expect(protoDescriptor).to.deep.equal({
+      value: { polluted: 'no' },
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+    expect(constructorDescriptor).to.deep.equal({
+      value: 'ctor',
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+    expect(prototypeDescriptor).to.deep.equal({
+      value: 'proto',
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+    expect({}.polluted).to.equal(undefined);
+  });
+
   it('ignores nullish sources when shallow assigning', () => {
     const target = safeShallowAssign({}, null, { value: 'first' }, undefined, { value: 'second' });
 
