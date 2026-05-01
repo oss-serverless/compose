@@ -30,7 +30,7 @@ const commands = [
   },
   {
     command: 'refresh-outputs',
-    description: 'Refresh the outptus for all services',
+    description: 'Refresh the outputs for all services',
   },
 ];
 

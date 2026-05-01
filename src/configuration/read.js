@@ -183,7 +183,7 @@ module.exports = async (configurationPath) => {
     );
   }
 
-  // Ensure no internal complex objects and no circural references
+  // Ensure no internal complex objects and no circular references
   try {
     configuration = JSON.parse(JSON.stringify(configuration));
   } catch (error) {
