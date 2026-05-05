@@ -11,7 +11,7 @@ const isSupportedNodeVersion = require('../src/cli/is-supported-node-version');
 if (!isSupportedNodeVersion(process.version)) {
   const composeVersion = require('../package.json').version;
   process.stderr.write(
-    `Error: Serverless Framework Compose v${composeVersion} does not support ` +
+    `Error: OSLS Compose v${composeVersion} does not support ` +
       `Node.js ${process.version}. Please use a supported release. ` +
       `Supported versions: ${isSupportedNodeVersion.supportedRange}.\n`
   );

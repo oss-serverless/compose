@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "The AWS CloudFormation template for Serverless Compose Remote State S3 Bucket",
+  "Description": "The AWS CloudFormation template for OSLS Compose Remote State S3 Bucket",
   "Parameters": {
     "BucketName": {
       "Description": "Name of the created state bucket",

@@ -958,7 +958,7 @@ describe('test/unit/src/components-service.test.js', () => {
     ).to.eventually.be.rejected.and.have.property('code', 'COMPONENT_COMMAND_NOT_FOUND');
   });
 
-  it('passes nested commands through for Serverless Framework services', async () => {
+  it('passes nested commands through for services', async () => {
     const command = sinon.stub().resolves();
 
     class FakeServerlessFramework {

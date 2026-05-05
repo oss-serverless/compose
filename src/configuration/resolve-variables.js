@@ -5,7 +5,7 @@ const traverse = require('traverse');
 const ServerlessError = require('../serverless-error');
 
 // For now, only supported variables are `${sls:stage}` and `${env:<key>}`;
-// TODO: After merging into Framework CLI, unify the configuration resolution handling with Framework logic
+// TODO: After merging into OSLS Framework CLI, unify the configuration resolution handling with OSLS Framework logic
 const resolveConfigurationVariables = async (
   configuration,
   configurationPath,
@@ -66,11 +66,11 @@ const resolveConfigurationVariables = async (
     );
     if (usedFrameworkOnlyVariableSources.length) {
       if (usedFrameworkOnlyVariableSources.length === 1) {
-        errorMessage += `\n\nVariable source "${usedFrameworkOnlyVariableSources[0]}" is Serverless Framework-specific source that is not supported in "${configurationFilename}"`;
+        errorMessage += `\n\nVariable source "${usedFrameworkOnlyVariableSources[0]}" is OSLS Framework-specific source that is not supported in "${configurationFilename}"`;
       } else {
         errorMessage += `\n\nVariable sources "${usedFrameworkOnlyVariableSources.join(
           '", "'
-        )}" are Serverless Framework-specific sources that are not supported in "${configurationFilename}"`;
+        )}" are OSLS Framework-specific sources that are not supported in "${configurationFilename}"`;
       }
     }
 

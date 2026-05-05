@@ -54,7 +54,7 @@ class ServerlessFramework {
 
     if (path.relative(process.cwd(), inputs.path) === '') {
       throw new ServerlessError(
-        `Service "${id}" cannot have a "path" that points to the root directory of the Serverless Framework Compose project`,
+        `Service "${id}" cannot have a "path" that points to the root directory of the OSLS Compose project`,
         'INVALID_PATH_IN_SERVICE_CONFIGURATION'
       );
     }
@@ -72,7 +72,7 @@ class ServerlessFramework {
   //     handler: async () => await this.command(['package']),
   //   },
   // };
-  // For now the workaround is to just pray that the command is correct and rely on validation from the Framework
+  // For now the workaround is to just pray that the command is correct and rely on validation from OSLS Framework
   async command(command, options) {
     const progressText = COMMAND_PROGRESS_TEXT[command];
     if (progressText) {
@@ -219,7 +219,7 @@ class ServerlessFramework {
         stdoutResult = stdoutBuffer.toString();
       } catch (e) {
         throw new Error(
-          'Could not find the Serverless Framework CLI installation. Ensure Serverless Framework is installed before continuing.\nhttps://github.com/oss-serverless/serverless',
+          'Could not find the OSLS Framework CLI installation. Ensure OSLS Framework is installed before continuing.\nhttps://github.com/oss-serverless/framework',
           { cause: e }
         );
       }
@@ -230,13 +230,13 @@ class ServerlessFramework {
       }
       if (!matchResult) {
         throw new Error(
-          'Could not verify the Serverless Framework CLI installation. Ensure Serverless Framework is installed before continuing.\nhttps://github.com/oss-serverless/serverless'
+          'Could not verify the OSLS Framework CLI installation. Ensure OSLS Framework is installed before continuing.\nhttps://github.com/oss-serverless/framework'
         );
       }
       const version = matchResult[1];
       if (!doesSatisfyRequiredFrameworkVersion(version)) {
         throw new Error(
-          `The installed version of Serverless Framework (${version}) is not supported by Compose. Please upgrade Serverless Framework to a version greater or equal to "${MINIMAL_FRAMEWORK_VERSION}"`
+          `The installed version of OSLS Framework (${version}) is not supported by Compose. Please upgrade OSLS Framework to a version greater or equal to "${MINIMAL_FRAMEWORK_VERSION}"`
         );
       }
       // Stored to avoid checking it on each invocation

@@ -20,7 +20,7 @@ describe('test/unit/src/validate-options.test.js', () => {
     validateOptions({ package: '../something' }, 'invoke');
   });
 
-  it('accepts Framework options for nested passthrough commands', () => {
+  it('accepts OSLS Framework options for nested passthrough commands', () => {
     validateOptions({ function: 'handler' }, 'deploy:function');
     validateOptions({ function: 'handler' }, 'invoke:local');
     validateOptions({ 'function': 'handler', 'function-version': '23' }, 'rollback:function');
