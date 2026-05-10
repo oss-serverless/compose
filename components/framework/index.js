@@ -236,7 +236,7 @@ class ServerlessFramework {
       const version = matchResult[1];
       if (!doesSatisfyRequiredFrameworkVersion(version)) {
         throw new Error(
-          `The installed version of osls (${version}) is not supported by osls compose. Please upgrade osls to a version greater or equal to "${MINIMAL_FRAMEWORK_VERSION}"`
+          `The installed version of osls (${version}) is not supported by osls compose. Please upgrade osls to a version greater than or equal to "${MINIMAL_FRAMEWORK_VERSION}"`
         );
       }
       // Stored to avoid checking it on each invocation

@@ -58,7 +58,7 @@ function validateCliOptions(options, method) {
 
   if (usedFrameworkSpecificCliOptions.length) {
     if (usedFrameworkSpecificCliOptions.length === 1) {
-      errorMessage += `\n\nCLI option "--${usedFrameworkSpecificCliOptions[0]}" is osls-specific option that is not supported in osls compose`;
+      errorMessage += `\n\nCLI option "--${usedFrameworkSpecificCliOptions[0]}" is an osls-specific option that is not supported in osls compose`;
     } else {
       errorMessage += `\n\nCLI options "--${usedFrameworkSpecificCliOptions.join(
         '", "--'
