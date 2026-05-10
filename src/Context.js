@@ -30,7 +30,7 @@ class Context {
       this.progresses.setFooterText(stderrCliColors.gray('Press [?] to enable verbose logs'));
     }
 
-    // Resolved Compose configuration
+    // Resolved osls compose configuration
     this.configuration = config.configuration;
   }
 

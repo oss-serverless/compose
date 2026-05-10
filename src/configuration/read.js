@@ -8,9 +8,9 @@ const yaml = require('js-yaml');
 const spawn = require('../utils/spawn');
 const ServerlessError = require('../serverless-error');
 
-// Logic for TS resolution is kept as similar as possible to the Serverless Framework codebase
+// Logic for TS resolution is kept as similar as possible to the osls codebase
 const resolveTsNode = async (serviceDir) => {
-  // 1. If installed aside of a Framework, use it
+  // 1. If installed alongside osls, use it
   try {
     return createRequire(path.resolve(__dirname, 'require-resolver')).resolve('ts-node');
   } catch (slsDepError) {
