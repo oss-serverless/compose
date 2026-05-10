@@ -1,13 +1,13 @@
-Curated `@serverless/utils` vendor for compose
+Curated `@serverless/utils` vendor for osls compose
 
 This subtree contains the small logging/reporting slice of `@serverless/utils`
-that compose still needs at process startup.
+that osls compose still needs at process startup.
 
 It is internal only.
-Compose does not alias any `@serverless/utils/*` import paths to this
+osls compose does not alias any `@serverless/utils/*` import paths to this
 directory.
 
-Loaded components should use the compose `ComponentContext` API for logging and
+Loaded components should use the osls compose `ComponentContext` API for logging and
 progress. If a component wants to use `@serverless/utils/*`, it must declare
 that dependency itself.
 

@@ -42,7 +42,7 @@ function formatLine(commandOrOption, description) {
 
 module.exports = async () => {
   const output = new Output(false);
-  output.writeText(`OSLS Compose v${version}`);
+  output.writeText(`osls compose v${version}`);
   output.writeText();
   output.writeText(colors.gray('Usage'));
   output.writeText('serverless <command> <options>');

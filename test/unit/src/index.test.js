@@ -356,7 +356,7 @@ describe('test/unit/src/index.test.js', () => {
     expect(processExit).to.have.been.calledOnceWithExactly(0);
   });
 
-  it('allows OSLS Framework options for nested passthrough commands after normalization', async () => {
+  it('allows osls options for nested passthrough commands after normalization', async () => {
     const componentsServiceInstance = {
       init: sinon.stub().resolves(),
       invokeComponentCommand: sinon.stub().resolves(),

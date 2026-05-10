@@ -54,7 +54,7 @@ describe('test/unit/src/configuration/validate.test.js', () => {
       .and.have.property('code', 'INVALID_NON_OBJECT_SERVICE_CONFIGURATION');
   });
 
-  it('rejects configuration that contains OSLS Framework-specific properties', () => {
+  it('rejects configuration that contains osls-specific properties', () => {
     expect(() =>
       validateConfiguration(
         {
@@ -68,7 +68,7 @@ describe('test/unit/src/configuration/validate.test.js', () => {
       .and.have.property('code', 'INVALID_CONFIGURATION');
   });
 
-  it('ignores inherited OSLS Framework-specific properties', () => {
+  it('ignores inherited osls-specific properties', () => {
     const configuration = Object.create({ provider: {} });
     configuration.services = {};
 

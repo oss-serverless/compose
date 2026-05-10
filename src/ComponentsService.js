@@ -360,10 +360,10 @@ class ComponentsService {
       'refresh-outputs',
       'package',
     ];
-    // Specific error messages for popular OSLS Framework commands
+    // Specific error messages for popular osls commands
     if (command === 'invoke') {
       throw new ServerlessError(
-        `"invoke" is not a global command in OSLS Compose.\nAvailable global commands: ${globalCommands.join(
+        `"invoke" is not a global command in osls compose.\nAvailable global commands: ${globalCommands.join(
           ', '
         )}.\nYou can invoke functions by running "serverless <service-name>:invoke --function <function>".`,
         'COMMAND_NOT_FOUND'
@@ -371,7 +371,7 @@ class ComponentsService {
     }
     if (command === 'offline') {
       throw new ServerlessError(
-        `"offline" is not a global command in OSLS Compose.\nAvailable global commands: ${globalCommands.join(
+        `"offline" is not a global command in osls compose.\nAvailable global commands: ${globalCommands.join(
           ', '
         )}.\nYou can run serverless-offline in each service by running "serverless <service-name>:${command}".`,
         'COMMAND_NOT_FOUND'
@@ -434,7 +434,7 @@ class ComponentsService {
         }
         handler = (opts) => component[command](opts);
       } else if (!hasCustomCommand && component instanceof ServerlessFramework) {
-        // Workaround to invoke all custom OSLS Framework commands
+        // Workaround to invoke all custom osls commands
         // TODO: Support options and validation
         handler = (opts) => component.command(command, opts);
       } else {

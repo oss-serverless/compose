@@ -1,7 +1,7 @@
 {
   "name": "@osls/compose",
   "version": "1.3.0",
-  "description": "OSLS Compose for deploying and orchestrating multiple services in monorepositories.",
+  "description": "osls compose for deploying and orchestrating multiple services in monorepositories.",
   "main": "src/index.js",
   "repository": {
     "type": "git",

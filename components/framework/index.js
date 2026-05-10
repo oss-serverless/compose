@@ -54,7 +54,7 @@ class ServerlessFramework {
 
     if (path.relative(process.cwd(), inputs.path) === '') {
       throw new ServerlessError(
-        `Service "${id}" cannot have a "path" that points to the root directory of the OSLS Compose project`,
+        `Service "${id}" cannot have a "path" that points to the root directory of the osls compose project`,
         'INVALID_PATH_IN_SERVICE_CONFIGURATION'
       );
     }
@@ -72,7 +72,7 @@ class ServerlessFramework {
   //     handler: async () => await this.command(['package']),
   //   },
   // };
-  // For now the workaround is to just pray that the command is correct and rely on validation from OSLS Framework
+  // For now the workaround is to just pray that the command is correct and rely on validation from osls
   async command(command, options) {
     const progressText = COMMAND_PROGRESS_TEXT[command];
     if (progressText) {
@@ -219,7 +219,7 @@ class ServerlessFramework {
         stdoutResult = stdoutBuffer.toString();
       } catch (e) {
         throw new Error(
-          'Could not find the OSLS Framework CLI installation. Ensure OSLS Framework is installed before continuing.\nhttps://github.com/oss-serverless/framework',
+          'Could not find the osls CLI installation. Ensure osls is installed before continuing.\nhttps://github.com/oss-serverless/osls',
           { cause: e }
         );
       }
@@ -230,13 +230,13 @@ class ServerlessFramework {
       }
       if (!matchResult) {
         throw new Error(
-          'Could not verify the OSLS Framework CLI installation. Ensure OSLS Framework is installed before continuing.\nhttps://github.com/oss-serverless/framework'
+          'Could not verify the osls CLI installation. Ensure osls is installed before continuing.\nhttps://github.com/oss-serverless/osls'
         );
       }
       const version = matchResult[1];
       if (!doesSatisfyRequiredFrameworkVersion(version)) {
         throw new Error(
-          `The installed version of OSLS Framework (${version}) is not supported by Compose. Please upgrade OSLS Framework to a version greater or equal to "${MINIMAL_FRAMEWORK_VERSION}"`
+          `The installed version of osls (${version}) is not supported by osls compose. Please upgrade osls to a version greater or equal to "${MINIMAL_FRAMEWORK_VERSION}"`
         );
       }
       // Stored to avoid checking it on each invocation

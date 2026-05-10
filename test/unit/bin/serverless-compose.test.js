@@ -37,7 +37,7 @@ describe('test/unit/bin/serverless-compose.test.js', () => {
 
     expect(isSupportedNodeVersion).to.have.been.calledOnceWithExactly(process.version);
     expect(stderrWrite).to.have.been.calledOnceWithExactly(
-      'Error: OSLS Compose v1.3.0 does not support ' +
+      'Error: osls compose v1.3.0 does not support ' +
         `Node.js ${process.version}. Please use a supported release. ` +
         'Supported versions: ^20.19.0 || ^22.13.0 || >=24.\n'
     );
