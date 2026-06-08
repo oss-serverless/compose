@@ -7,10 +7,6 @@ const sinon = require('sinon');
 const expect = chai.expect;
 
 describe('test/unit/src/utils/serverless-utils/log-reporters/node/progress-reporter.test.js', () => {
-  afterEach(() => {
-    sinon.restore();
-  });
-
   const loadProgressReporter = () => {
     const handlers = new Map();
     const cliProgressFooter = {
