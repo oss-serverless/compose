@@ -31,7 +31,6 @@ describe('test/unit/src/cli/Progresses.test.js', () => {
       delete Progresses.lastBoundInstance;
     }
     loadedProgresses = [];
-    sinon.restore();
   });
 
   const createProgresses = (columns = 5, rows = 3) => {

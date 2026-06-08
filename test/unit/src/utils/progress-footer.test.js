@@ -69,7 +69,6 @@ const createFooter = (options = {}) => {
 describe('test/unit/src/utils/progress-footer.test.js', () => {
   afterEach(() => {
     delete require.cache[require.resolve(modulePath)];
-    sinon.restore();
   });
 
   it('writes array progress rows', () => {

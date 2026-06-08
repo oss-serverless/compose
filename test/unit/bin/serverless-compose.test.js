@@ -12,10 +12,6 @@ describe('test/unit/bin/serverless-compose.test.js', () => {
     proxyquire.noCallThru().load('../../../bin/serverless-compose', stubs);
   };
 
-  afterEach(() => {
-    sinon.restore();
-  });
-
   it('exits before loading the runtime on unsupported Node versions', () => {
     process.argv = ['node', 'serverless-compose', 'deploy', '--verbose'];
     const isSupportedNodeVersion = sinon.stub().returns(false);

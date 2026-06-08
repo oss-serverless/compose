@@ -27,7 +27,6 @@ describe('test/unit/src/index.test.js', () => {
   afterEach(() => {
     for (const snapshot of listenerSnapshots) restoreAddedListeners(snapshot);
     listenerSnapshots = [];
-    sinon.restore();
   });
 
   const loadRunComponents = (componentsServiceInstances, validateOptions = sinon.stub()) => {
