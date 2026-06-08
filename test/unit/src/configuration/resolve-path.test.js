@@ -1,7 +1,6 @@
 'use strict';
 
 const fs = require('node:fs').promises;
-const os = require('node:os');
 const path = require('node:path');
 const { expect } = require('chai');
 
@@ -12,7 +11,7 @@ describe('test/unit/src/configuration/resolve-path.test.js', () => {
   let tmpDir;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'compose-resolve-path-'));
+    tmpDir = await fs.mkdtemp(path.join(process.cwd(), 'compose-resolve-path-'));
   });
 
   afterEach(async () => {

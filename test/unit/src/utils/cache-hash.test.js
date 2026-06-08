@@ -2,7 +2,6 @@
 
 const fs = require('node:fs').promises;
 const crypto = require('node:crypto');
-const os = require('node:os');
 const path = require('node:path');
 const proxyquire = require('proxyquire');
 const { expect } = require('chai');
@@ -25,7 +24,7 @@ describe('test/unit/src/utils/cache-hash.test.js', () => {
   let tmpDir;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'compose-cache-hash-'));
+    tmpDir = await fs.mkdtemp(path.join(process.cwd(), 'compose-cache-hash-'));
   });
 
   afterEach(async () => {
@@ -87,7 +86,7 @@ describe('test/unit/src/utils/cache-hash.test.js', () => {
   });
 
   it('does not include file paths in cache hashes', async () => {
-    const otherDir = await fs.mkdtemp(path.join(os.tmpdir(), 'compose-cache-hash-other-'));
+    const otherDir = await fs.mkdtemp(path.join(process.cwd(), 'compose-cache-hash-other-'));
 
     try {
       await outputFile(path.join(tmpDir, 'one.txt'), 'content\n');

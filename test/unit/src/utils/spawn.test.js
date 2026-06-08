@@ -1,7 +1,6 @@
 'use strict';
 
 const fs = require('fs').promises;
-const os = require('os');
 const path = require('path');
 const { EventEmitter } = require('events');
 const nodeStream = require('stream');
@@ -74,7 +73,7 @@ const assertRedaction = async ({ args, redacted, visible = [] }) => {
 
 describe('spawn', () => {
   it('executes PATH shims through cross-platform resolution', async () => {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'spawn-shim-'));
+    const tempDir = await fs.mkdtemp(path.join(process.cwd(), 'spawn-shim-'));
     const commandName = `spawn-shim-${process.pid}-${Date.now()}`;
     const commandPath = path.join(
       tempDir,

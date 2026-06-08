@@ -2,7 +2,6 @@
 
 const fs = require('node:fs');
 const fsp = fs.promises;
-const os = require('node:os');
 const path = require('node:path');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
@@ -16,7 +15,7 @@ describe('test/unit/src/utils/fs.test.js', () => {
   let tmpDir;
 
   beforeEach(async () => {
-    tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'compose-fs-'));
+    tmpDir = await fsp.mkdtemp(path.join(process.cwd(), 'compose-fs-'));
   });
 
   afterEach(async () => {

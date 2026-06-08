@@ -1,6 +1,5 @@
 'use strict';
 
-const os = require('os');
 const path = require('path');
 const fsp = require('fs').promises;
 const expect = require('chai').expect;
@@ -12,7 +11,7 @@ describe('test/unit/src/state/LocalStateStorage.test.js', () => {
   let rootDir;
 
   beforeEach(async () => {
-    rootDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'compose-local-state-'));
+    rootDir = await fsp.mkdtemp(path.join(process.cwd(), 'compose-local-state-'));
     await ensureDir(path.join(rootDir, '.serverless'));
   });
 
