@@ -7,10 +7,6 @@ const sinon = require('sinon');
 const expect = chai.expect;
 
 describe('test/unit/src/utils/aws/get-client-config.test.js', () => {
-  afterEach(() => {
-    sinon.restore();
-  });
-
   it('builds client config with resolved credentials', () => {
     const getCredentialProvider = sinon.stub().returns('creds');
     const buildClientConfig = sinon.stub().returns('client-config');

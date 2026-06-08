@@ -74,10 +74,6 @@ describe('test/unit/src/utils/aws/credentials.test.js', () => {
     });
   }
 
-  afterEach(() => {
-    sinon.restore();
-  });
-
   it('does not mutate AWS_PROFILE when AWS_DEFAULT_PROFILE is set', async () => {
     await withEnv(async () => {
       process.env.AWS_DEFAULT_PROFILE = 'custom-default';

@@ -7,10 +7,6 @@ const sinon = require('sinon');
 const expect = chai.expect;
 
 describe('test/unit/src/utils/aws/get-credential-provider.test.js', () => {
-  afterEach(() => {
-    sinon.restore();
-  });
-
   it('forwards profile and stage to the aligned credential resolver', () => {
     const credentialProvider = sinon.stub().returns('provider');
 
