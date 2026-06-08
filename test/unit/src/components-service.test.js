@@ -26,6 +26,57 @@ const frameworkComponentPath = path.dirname(
   require.resolve('../../../components/framework/index.js')
 );
 
+const createContext = async ({
+  root = process.cwd(),
+  stage = 'dev',
+  disableIO = true,
+  configuration = {},
+  stateStorage,
+} = {}) => {
+  const context = new Context({ root, stage, disableIO, configuration });
+  await context.init();
+
+  if (stateStorage) context.stateStorage = stateStorage;
+
+  return context;
+};
+
+const loadComponentsService = ({ loadComponent, FrameworkComponent } = {}) => {
+  const stubs = {};
+
+  if (loadComponent) {
+    stubs['./load'] = { loadComponent };
+  }
+
+  if (FrameworkComponent) {
+    stubs['../components/framework'] = FrameworkComponent;
+  }
+
+  if (Object.keys(stubs).length === 0) return ComponentsService;
+
+  return proxyquire('../../../src/ComponentsService', stubs);
+};
+
+const createComponentsService = async ({
+  configuration,
+  options = {},
+  context,
+  stateStorage,
+  loadComponent,
+  FrameworkComponent,
+}) => {
+  const localContext = context || (await createContext({ stateStorage }));
+  const ComponentsServiceClass = loadComponentsService({ loadComponent, FrameworkComponent });
+  const localComponentsService = new ComponentsServiceClass(localContext, configuration, options);
+  await localComponentsService.init();
+
+  return { componentsService: localComponentsService, context: localContext };
+};
+
+const createEmptyOutputsStateStorage = () => ({
+  readComponentsOutputs: async () => ({}),
+});
+
 describe('test/unit/src/components-service.test.js', () => {
   let componentsService;
   before(async () => {
@@ -48,14 +99,7 @@ describe('test/unit/src/components-service.test.js', () => {
         },
       },
     };
-    const contextConfig = {
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    };
-    const context = new Context(contextConfig);
-    await context.init();
+    const context = await createContext();
     componentsService = new ComponentsService(context, configuration, {});
     await componentsService.init();
   });
@@ -95,13 +139,7 @@ describe('test/unit/src/components-service.test.js', () => {
   });
 
   it('does not treat inherited object keys as internal components', async () => {
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
+    const context = await createContext();
 
     const localComponentsService = new ComponentsService(
       context,
@@ -147,14 +185,7 @@ describe('test/unit/src/components-service.test.js', () => {
         },
       },
     };
-    const contextConfig = {
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    };
-    const context = new Context(contextConfig);
-    await context.init();
+    const context = await createContext();
     componentsService = new ComponentsService(context, configuration, {});
 
     await expect(componentsService.init()).to.eventually.be.rejectedWith(
@@ -178,13 +209,7 @@ describe('test/unit/src/components-service.test.js', () => {
         },
       },
     };
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
+    const context = await createContext();
 
     const localComponentsService = new ComponentsService(context, configuration, {});
 
@@ -204,13 +229,7 @@ describe('test/unit/src/components-service.test.js', () => {
         },
       },
     };
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
+    const context = await createContext();
 
     const localComponentsService = new ComponentsService(context, configuration, {});
 
@@ -221,13 +240,7 @@ describe('test/unit/src/components-service.test.js', () => {
   });
 
   it('rejects reserved service aliases during initialization', async () => {
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
+    const context = await createContext();
 
     const localComponentsService = new ComponentsService(
       context,
@@ -256,22 +269,6 @@ describe('test/unit/src/components-service.test.js', () => {
       commands: {},
       alias,
     }));
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-    context.stateStorage.readComponentsOutputs = async () => ({
-      foundation: {
-        endpoint: 'https://example.com',
-      },
-    });
-
     const configuration = {
       services: {
         foundation: {
@@ -289,8 +286,17 @@ describe('test/unit/src/components-service.test.js', () => {
       },
     };
 
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(context, configuration, {});
-    await localComponentsService.init();
+    const { componentsService: localComponentsService } = await createComponentsService({
+      configuration,
+      loadComponent,
+      stateStorage: {
+        readComponentsOutputs: async () => ({
+          foundation: {
+            endpoint: 'https://example.com',
+          },
+        }),
+      },
+    });
 
     await expect(localComponentsService.deploy()).to.eventually.be.rejected.and.have.property(
       'code',
@@ -307,22 +313,6 @@ describe('test/unit/src/components-service.test.js', () => {
       commands: {},
       alias,
     }));
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-    context.stateStorage.readComponentsOutputs = async () => ({
-      foundation: {
-        items: ['one', 'two', 'three'],
-      },
-    });
-
     const configuration = {
       services: {
         foundation: {
@@ -340,8 +330,17 @@ describe('test/unit/src/components-service.test.js', () => {
       },
     };
 
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(context, configuration, {});
-    await localComponentsService.init();
+    const { componentsService: localComponentsService } = await createComponentsService({
+      configuration,
+      loadComponent,
+      stateStorage: {
+        readComponentsOutputs: async () => ({
+          foundation: {
+            items: ['one', 'two', 'three'],
+          },
+        }),
+      },
+    });
     await localComponentsService.deploy();
 
     expect(loadComponent.secondCall.args[0].inputs.params.count).to.equal(3);
@@ -354,19 +353,6 @@ describe('test/unit/src/components-service.test.js', () => {
         order.push(alias);
       },
     }));
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-    context.stateStorage.readComponentsOutputs = async () => ({});
-
     const configuration = {
       services: {
         foundation: {
@@ -386,8 +372,11 @@ describe('test/unit/src/components-service.test.js', () => {
       },
     };
 
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(context, configuration, {});
-    await localComponentsService.init();
+    const { componentsService: localComponentsService } = await createComponentsService({
+      configuration,
+      loadComponent,
+      stateStorage: createEmptyOutputsStateStorage(),
+    });
     await localComponentsService.deploy();
 
     expect(order).to.deep.equal(['foundation', 'api', 'app']);
@@ -400,20 +389,6 @@ describe('test/unit/src/components-service.test.js', () => {
         order.push(alias);
       },
     }));
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-    context.stateStorage.readComponentsOutputs = async () => ({});
-    context.stateStorage.removeState = async () => {};
-
     const configuration = {
       services: {
         foundation: {
@@ -433,8 +408,14 @@ describe('test/unit/src/components-service.test.js', () => {
       },
     };
 
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(context, configuration, {});
-    await localComponentsService.init();
+    const { componentsService: localComponentsService } = await createComponentsService({
+      configuration,
+      loadComponent,
+      stateStorage: {
+        readComponentsOutputs: async () => ({}),
+        removeState: async () => {},
+      },
+    });
     await localComponentsService.remove();
 
     expect(order).to.deep.equal(['app', 'api', 'foundation']);
@@ -447,19 +428,6 @@ describe('test/unit/src/components-service.test.js', () => {
         order.push(alias);
       },
     }));
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-    context.stateStorage.readComponentsOutputs = async () => ({});
-
     const configuration = {
       services: {
         foundation: {
@@ -484,8 +452,11 @@ describe('test/unit/src/components-service.test.js', () => {
       },
     };
 
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(context, configuration, {});
-    await localComponentsService.init();
+    const { componentsService: localComponentsService } = await createComponentsService({
+      configuration,
+      loadComponent,
+      stateStorage: createEmptyOutputsStateStorage(),
+    });
     await localComponentsService.deploy();
 
     const foundationIndex = order.indexOf('foundation');
@@ -511,19 +482,6 @@ describe('test/unit/src/components-service.test.js', () => {
         context.progresses.success(alias, 'deployed');
       },
     }));
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-    context.stateStorage.readComponentsOutputs = async () => ({});
-
     const configuration = {
       services: {
         foundation: {
@@ -543,8 +501,11 @@ describe('test/unit/src/components-service.test.js', () => {
       },
     };
 
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(context, configuration, {});
-    await localComponentsService.init();
+    const { componentsService: localComponentsService, context } = await createComponentsService({
+      configuration,
+      loadComponent,
+      stateStorage: createEmptyOutputsStateStorage(),
+    });
     await localComponentsService.deploy();
 
     expect(order).to.deep.equal(['foundation', 'api']);
@@ -571,19 +532,6 @@ describe('test/unit/src/components-service.test.js', () => {
         active -= 1;
       },
     }));
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-    context.stateStorage.readComponentsOutputs = async () => ({});
-
     const configuration = {
       services: {
         foundation: {
@@ -601,10 +549,12 @@ describe('test/unit/src/components-service.test.js', () => {
       },
     };
 
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(context, configuration, {
-      'max-concurrency': 2,
+    const { componentsService: localComponentsService } = await createComponentsService({
+      configuration,
+      options: { 'max-concurrency': 2 },
+      loadComponent,
+      stateStorage: createEmptyOutputsStateStorage(),
     });
-    await localComponentsService.init();
 
     const infoPromise = localComponentsService.info({ 'max-concurrency': 2 });
 
@@ -634,12 +584,6 @@ describe('test/unit/src/components-service.test.js', () => {
         },
       },
     };
-    const contextConfig = {
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    };
     const mockedStateStorage = {
       readServiceState: () => ({ id: 123, detectedFrameworkVersion: '9.9.9' }),
       readComponentsOutputs: () => {
@@ -654,9 +598,7 @@ describe('test/unit/src/components-service.test.js', () => {
         };
       },
     };
-    const context = new Context(contextConfig);
-    await context.init();
-    context.stateStorage = mockedStateStorage;
+    const context = await createContext({ stateStorage: mockedStateStorage });
     componentsService = new ComponentsService(context, configuration, {});
 
     await componentsService.outputs();
@@ -685,12 +627,6 @@ describe('test/unit/src/components-service.test.js', () => {
         },
       },
     };
-    const contextConfig = {
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    };
     const mockedStateStorage = {
       readServiceState: () => ({ id: 123, detectedFrameworkVersion: '9.9.9' }),
       readComponentOutputs: () => {
@@ -699,9 +635,7 @@ describe('test/unit/src/components-service.test.js', () => {
         };
       },
     };
-    const context = new Context(contextConfig);
-    await context.init();
-    context.stateStorage = mockedStateStorage;
+    const context = await createContext({ stateStorage: mockedStateStorage });
     componentsService = new ComponentsService(context, configuration, {});
 
     await componentsService.outputs({ componentName: 'resources' });
@@ -711,16 +645,11 @@ describe('test/unit/src/components-service.test.js', () => {
   });
 
   it('rejects global outputs command when no deployed service outputs exist', async () => {
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
+    const context = await createContext({
+      stateStorage: {
+        readComponentsOutputs: () => Object.create(null),
+      },
     });
-    await context.init();
-    context.stateStorage = {
-      readComponentsOutputs: () => Object.create(null),
-    };
 
     const localComponentsService = new ComponentsService(
       context,
@@ -738,21 +667,16 @@ describe('test/unit/src/components-service.test.js', () => {
   });
 
   it('renders non-empty null-prototype outputs', async () => {
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
+    const context = await createContext({
+      stateStorage: {
+        readComponentsOutputs: () =>
+          Object.assign(Object.create(null), {
+            resources: {
+              endpoint: 'https://example.com',
+            },
+          }),
+      },
     });
-    await context.init();
-    context.stateStorage = {
-      readComponentsOutputs: () =>
-        Object.assign(Object.create(null), {
-          resources: {
-            endpoint: 'https://example.com',
-          },
-        }),
-    };
 
     const localComponentsService = new ComponentsService(
       context,
@@ -771,17 +695,8 @@ describe('test/unit/src/components-service.test.js', () => {
   });
 
   it('does not add graph edges for services with no dependencies', async () => {
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-
-    const localComponentsService = new ComponentsService(
-      context,
-      {
+    const { componentsService: localComponentsService } = await createComponentsService({
+      configuration: {
         name: 'test-service',
         services: {
           resources: {
@@ -792,10 +707,7 @@ describe('test/unit/src/components-service.test.js', () => {
           },
         },
       },
-      {}
-    );
-
-    await localComponentsService.init();
+    });
 
     expect(localComponentsService.allComponents.resources.dependencies).to.deep.equal([]);
     expect(localComponentsService.allComponents.api.dependencies).to.deep.equal([]);
@@ -804,27 +716,13 @@ describe('test/unit/src/components-service.test.js', () => {
 
   it('returns without loading components when graph execution has no nodes', async () => {
     const loadComponent = sinon.stub();
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(
-      context,
-      {
+    const { componentsService: localComponentsService } = await createComponentsService({
+      configuration: {
         name: 'test-service',
         services: {},
       },
-      {}
-    );
-
-    await localComponentsService.init();
+      loadComponent,
+    });
     await localComponentsService.executeComponentsGraph({ method: 'deploy' });
     await localComponentsService.instantiateComponents();
 
@@ -832,13 +730,7 @@ describe('test/unit/src/components-service.test.js', () => {
   });
 
   it('rejects reserved component aliases in direct command invocation', async () => {
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
+    const context = await createContext();
     const localComponentsService = new ComponentsService(context, { services: {} }, {});
 
     await expect(
@@ -850,20 +742,8 @@ describe('test/unit/src/components-service.test.js', () => {
     const loadComponent = sinon.stub().resolves({
       commands: {},
     });
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(
-      context,
-      {
+    const { componentsService: localComponentsService } = await createComponentsService({
+      configuration: {
         services: {
           foundation: {
             component: '@foo/foundation',
@@ -871,9 +751,9 @@ describe('test/unit/src/components-service.test.js', () => {
           },
         },
       },
-      {}
-    );
-    await localComponentsService.init();
+      loadComponent,
+      stateStorage: createEmptyOutputsStateStorage(),
+    });
 
     await expect(
       localComponentsService.invokeComponentCommand('foundation', 'toString', {})
@@ -889,20 +769,8 @@ describe('test/unit/src/components-service.test.js', () => {
         },
       }),
     });
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(
-      context,
-      {
+    const { componentsService: localComponentsService } = await createComponentsService({
+      configuration: {
         services: {
           foundation: {
             component: '@foo/foundation',
@@ -910,9 +778,9 @@ describe('test/unit/src/components-service.test.js', () => {
           },
         },
       },
-      {}
-    );
-    await localComponentsService.init();
+      loadComponent,
+      stateStorage: createEmptyOutputsStateStorage(),
+    });
 
     await expect(
       localComponentsService.invokeComponentCommand('foundation', 'inherited', {})
@@ -928,20 +796,8 @@ describe('test/unit/src/components-service.test.js', () => {
         },
       },
     });
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(
-      context,
-      {
+    const { componentsService: localComponentsService } = await createComponentsService({
+      configuration: {
         services: {
           foundation: {
             component: '@foo/foundation',
@@ -949,9 +805,9 @@ describe('test/unit/src/components-service.test.js', () => {
           },
         },
       },
-      {}
-    );
-    await localComponentsService.init();
+      loadComponent,
+      stateStorage: createEmptyOutputsStateStorage(),
+    });
 
     await expect(
       localComponentsService.invokeComponentCommand('foundation', 'broken', {})
@@ -968,30 +824,18 @@ describe('test/unit/src/components-service.test.js', () => {
     }
 
     const loadComponent = sinon.stub().resolves(new FakeServerlessFramework());
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-      '../components/framework': FakeServerlessFramework,
-    });
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(
-      context,
-      {
+    const { componentsService: localComponentsService, context } = await createComponentsService({
+      configuration: {
         services: {
           api: {
             path: 'api',
           },
         },
       },
-      {}
-    );
-    await localComponentsService.init();
+      loadComponent,
+      FrameworkComponent: FakeServerlessFramework,
+      stateStorage: createEmptyOutputsStateStorage(),
+    });
 
     const cases = [
       {
@@ -1037,20 +881,8 @@ describe('test/unit/src/components-service.test.js', () => {
     }
 
     const loadComponent = sinon.stub().resolves(new FakeComponent());
-    const ComponentsServiceWithStubbedLoad = proxyquire('../../../src/ComponentsService', {
-      './load': { loadComponent },
-    });
-    const context = new Context({
-      root: process.cwd(),
-      stage: 'dev',
-      disableIO: true,
-      configuration: {},
-    });
-    await context.init();
-
-    const localComponentsService = new ComponentsServiceWithStubbedLoad(
-      context,
-      {
+    const { componentsService: localComponentsService, context } = await createComponentsService({
+      configuration: {
         services: {
           foundation: {
             component: '@foo/foundation',
@@ -1058,9 +890,9 @@ describe('test/unit/src/components-service.test.js', () => {
           },
         },
       },
-      {}
-    );
-    await localComponentsService.init();
+      loadComponent,
+      stateStorage: createEmptyOutputsStateStorage(),
+    });
     await localComponentsService.invokeComponentCommand('foundation', 'deploy', { force: true });
 
     expect(deploy.calledOnceWithExactly({ force: true })).to.equal(true);
