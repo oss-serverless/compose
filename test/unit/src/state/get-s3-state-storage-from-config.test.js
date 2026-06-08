@@ -6,33 +6,51 @@ const sinon = require('sinon');
 
 const expect = chai.expect;
 
-describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
-  afterEach(() => {
-    sinon.restore();
-  });
-
-  it('uses us-east-1 for compose-managed buckets', async () => {
-    const getStateBucketName = sinon.stub().resolves('managed-bucket');
-    const getConfiguredStateBucketName = sinon.stub().returns(null);
-    const getStateBucketRegion = sinon.stub();
-    const awsClientConfig = { region: 'us-east-1', credentials: 'creds', retryMode: 'standard' };
-    const getAwsClientConfig = sinon.stub().returns(awsClientConfig);
-
-    class S3StateStorage {
-      constructor(config) {
-        this.config = config;
-      }
+const loadGetS3StateStorageFromConfig = ({
+  getStateBucketName = sinon.stub().resolves('bucket'),
+  getConfiguredStateBucketName = sinon.stub().returns(null),
+  getStateBucketRegion = sinon.stub().resolves('us-east-1'),
+  getAwsClientConfig = sinon.stub().returns({ region: 'us-east-1' }),
+} = {}) => {
+  class S3StateStorage {
+    constructor(config) {
+      this.config = config;
     }
+  }
 
-    const getS3StateStorageFromConfig = proxyquire
-      .noCallThru()
-      .load('../../../../src/state/get-s3-state-storage-from-config', {
-        '../utils/aws': { getAwsClientConfig },
-        './S3StateStorage': S3StateStorage,
-        './utils/get-configured-state-bucket-name': getConfiguredStateBucketName,
-        './utils/get-state-bucket-name': getStateBucketName,
-        './utils/get-state-bucket-region': getStateBucketRegion,
-      });
+  const getS3StateStorageFromConfig = proxyquire
+    .noCallThru()
+    .load('../../../../src/state/get-s3-state-storage-from-config', {
+      '../utils/aws': { getAwsClientConfig },
+      './S3StateStorage': S3StateStorage,
+      './utils/get-configured-state-bucket-name': getConfiguredStateBucketName,
+      './utils/get-state-bucket-name': getStateBucketName,
+      './utils/get-state-bucket-region': getStateBucketRegion,
+    });
+
+  return {
+    getS3StateStorageFromConfig,
+    getStateBucketName,
+    getConfiguredStateBucketName,
+    getStateBucketRegion,
+    getAwsClientConfig,
+  };
+};
+
+describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
+  it('uses us-east-1 for compose-managed buckets', async () => {
+    const awsClientConfig = { region: 'us-east-1', credentials: 'creds', retryMode: 'standard' };
+    const {
+      getS3StateStorageFromConfig,
+      getStateBucketName,
+      getConfiguredStateBucketName,
+      getStateBucketRegion,
+      getAwsClientConfig,
+    } = loadGetS3StateStorageFromConfig({
+      getStateBucketName: sinon.stub().resolves('managed-bucket'),
+      getStateBucketRegion: sinon.stub(),
+      getAwsClientConfig: sinon.stub().returns(awsClientConfig),
+    });
 
     const stateStorage = await getS3StateStorageFromConfig(
       { backend: 's3', prefix: 'custom', profile: 'team' },
@@ -66,22 +84,12 @@ describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
     const getStateBucketRegion = sinon.stub().resolves('eu-central-1');
     const awsClientConfig = { region: 'eu-central-1', credentials: 'creds', retryMode: 'standard' };
     const getAwsClientConfig = sinon.stub().returns(awsClientConfig);
-
-    class S3StateStorage {
-      constructor(config) {
-        this.config = config;
-      }
-    }
-
-    const getS3StateStorageFromConfig = proxyquire
-      .noCallThru()
-      .load('../../../../src/state/get-s3-state-storage-from-config', {
-        '../utils/aws': { getAwsClientConfig },
-        './S3StateStorage': S3StateStorage,
-        './utils/get-configured-state-bucket-name': getConfiguredStateBucketName,
-        './utils/get-state-bucket-name': getStateBucketName,
-        './utils/get-state-bucket-region': getStateBucketRegion,
-      });
+    const { getS3StateStorageFromConfig } = loadGetS3StateStorageFromConfig({
+      getStateBucketName,
+      getConfiguredStateBucketName,
+      getStateBucketRegion,
+      getAwsClientConfig,
+    });
 
     const stateStorage = await getS3StateStorageFromConfig(stateConfiguration, { stage: 'dev' });
 
@@ -114,22 +122,12 @@ describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
     const getStateBucketRegion = sinon.stub().resolves('eu-central-1');
     const awsClientConfig = { region: 'eu-central-1', credentials: 'creds', retryMode: 'standard' };
     const getAwsClientConfig = sinon.stub().returns(awsClientConfig);
-
-    class S3StateStorage {
-      constructor(config) {
-        this.config = config;
-      }
-    }
-
-    const getS3StateStorageFromConfig = proxyquire
-      .noCallThru()
-      .load('../../../../src/state/get-s3-state-storage-from-config', {
-        '../utils/aws': { getAwsClientConfig },
-        './S3StateStorage': S3StateStorage,
-        './utils/get-configured-state-bucket-name': getConfiguredStateBucketName,
-        './utils/get-state-bucket-name': getStateBucketName,
-        './utils/get-state-bucket-region': getStateBucketRegion,
-      });
+    const { getS3StateStorageFromConfig } = loadGetS3StateStorageFromConfig({
+      getStateBucketName,
+      getConfiguredStateBucketName,
+      getStateBucketRegion,
+      getAwsClientConfig,
+    });
 
     const stateStorage = await getS3StateStorageFromConfig(stateConfiguration, { stage: 'dev' });
 
@@ -152,26 +150,18 @@ describe('test/unit/src/state/get-s3-state-storage-from-config.test.js', () => {
   });
 
   it('rejects invalid stage before composing S3 state key', async () => {
-    const getStateBucketName = sinon.stub();
-    const getConfiguredStateBucketName = sinon.stub();
-    const getStateBucketRegion = sinon.stub();
-    const getAwsClientConfig = sinon.stub();
-
-    class S3StateStorage {
-      constructor(config) {
-        this.config = config;
-      }
-    }
-
-    const getS3StateStorageFromConfig = proxyquire
-      .noCallThru()
-      .load('../../../../src/state/get-s3-state-storage-from-config', {
-        '../utils/aws': { getAwsClientConfig },
-        './S3StateStorage': S3StateStorage,
-        './utils/get-configured-state-bucket-name': getConfiguredStateBucketName,
-        './utils/get-state-bucket-name': getStateBucketName,
-        './utils/get-state-bucket-region': getStateBucketRegion,
-      });
+    const {
+      getS3StateStorageFromConfig,
+      getStateBucketName,
+      getConfiguredStateBucketName,
+      getStateBucketRegion,
+      getAwsClientConfig,
+    } = loadGetS3StateStorageFromConfig({
+      getStateBucketName: sinon.stub(),
+      getConfiguredStateBucketName: sinon.stub(),
+      getStateBucketRegion: sinon.stub(),
+      getAwsClientConfig: sinon.stub(),
+    });
 
     await expect(
       getS3StateStorageFromConfig({ backend: 's3' }, { stage: 'foo/../../tmp/x' })

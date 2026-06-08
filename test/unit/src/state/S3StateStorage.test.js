@@ -147,30 +147,32 @@ describe('test/unit/src/state/S3StateStorage.test.js', () => {
     });
   });
 
-  it('passes full client config into the S3 client constructor', () => {
-    const S3 = sinon.stub().returns({});
-    const S3StateStorageWithStubbedClient = proxyquire
-      .noCallThru()
-      .load('../../../../src/state/S3StateStorage', {
-        '@aws-sdk/client-s3': { S3 },
+  describe('S3 client config', () => {
+    it('passes full client config into the S3 client constructor', () => {
+      const S3 = sinon.stub().returns({});
+      const S3StateStorageWithStubbedClient = proxyquire
+        .noCallThru()
+        .load('../../../../src/state/S3StateStorage', {
+          '@aws-sdk/client-s3': { S3 },
+        });
+
+      const stateStorage = new S3StateStorageWithStubbedClient({
+        bucketName,
+        stateKey,
+        region: 'eu-central-1',
+        clientConfig: {
+          region: 'eu-central-1',
+          credentials: 'creds',
+          retryMode: 'standard',
+        },
       });
 
-    const stateStorage = new S3StateStorageWithStubbedClient({
-      bucketName,
-      stateKey,
-      region: 'eu-central-1',
-      clientConfig: {
+      expect(stateStorage).to.be.instanceOf(S3StateStorageWithStubbedClient);
+      expect(S3).to.have.been.calledOnceWithExactly({
         region: 'eu-central-1',
         credentials: 'creds',
         retryMode: 'standard',
-      },
-    });
-
-    expect(stateStorage).to.be.instanceOf(S3StateStorageWithStubbedClient);
-    expect(S3).to.have.been.calledOnceWithExactly({
-      region: 'eu-central-1',
-      credentials: 'creds',
-      retryMode: 'standard',
+      });
     });
   });
 
