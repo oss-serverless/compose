@@ -3,6 +3,8 @@
 const chai = require('chai');
 const proxyquire = require('proxyquire');
 
+const { withClearedEnv } = require('../../../../lib/env');
+
 const { expect } = chai;
 
 describe('test/unit/src/utils/aws/config.test.js', () => {
@@ -25,21 +27,7 @@ describe('test/unit/src/utils/aws/config.test.js', () => {
     'https_cafile',
   ];
 
-  async function withEnv(callback) {
-    const originalEnv = new Map(envKeys.map((key) => [key, process.env[key]]));
-
-    for (const key of envKeys) delete process.env[key];
-
-    try {
-      return await callback();
-    } finally {
-      for (const key of envKeys) {
-        const value = originalEnv.get(key);
-        if (value === undefined) delete process.env[key];
-        else process.env[key] = value;
-      }
-    }
-  }
+  const withEnv = (callback) => withClearedEnv(envKeys, callback);
 
   function loadConfig() {
     function FakeNodeHttpHandler(options) {
