@@ -4,7 +4,7 @@ This document describes the expected style for new and updated Compose tests.
 
 Prefer the smallest harness that exercises the behavior under test without hiding important Compose interactions.
 
-## Unit tests
+## Unit Tests
 
 Tests use [Mocha](https://mochajs.org/) and can be run with:
 
