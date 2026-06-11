@@ -57,7 +57,7 @@ const ensureRemoteStateBucketStackExists = async (context, stateConfiguration) =
   // TODO: REPLACE WITH PROGRESS
   context.output.log('Creating S3 bucket for remote state');
 
-  const bucketName = `serverless-compose-state-${crypto.randomBytes(6).toString('hex')}`;
+  const bucketName = `serverless-compose-state-${crypto.randomBytes(12).toString('hex')}`;
   await client.createStack({
     StackName: COMPOSE_REMOTE_STATE_STACK_NAME,
     TemplateBody: templateBody,

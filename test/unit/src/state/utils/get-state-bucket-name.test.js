@@ -75,9 +75,9 @@ describe('test/unit/src/state/utils/get-state-bucket-name.test.js', () => {
         .on(DescribeStacksCommand)
         .resolves({ Stacks: [{ StackStatus: 'CREATE_COMPLETE' }] });
 
-      expect(
-        (await getStateBucketName(configuration, context)).startsWith('serverless-compose-state-')
-      ).to.be.true;
+      expect(await getStateBucketName(configuration, context)).to.match(
+        /^serverless-compose-state-[a-f0-9]{24}$/
+      );
     });
 
     it('handles SDK v3 ValidationError names when bucket stack has to be created', async () => {
@@ -92,9 +92,9 @@ describe('test/unit/src/state/utils/get-state-bucket-name.test.js', () => {
         .on(DescribeStacksCommand)
         .resolves({ Stacks: [{ StackStatus: 'CREATE_COMPLETE' }] });
 
-      expect(
-        (await getStateBucketName(configuration, context)).startsWith('serverless-compose-state-')
-      ).to.be.true;
+      expect(await getStateBucketName(configuration, context)).to.match(
+        /^serverless-compose-state-[a-f0-9]{24}$/
+      );
     });
 
     it('handles unexpected error when resolving bucket from s3', async () => {
