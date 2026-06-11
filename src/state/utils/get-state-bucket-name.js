@@ -2,14 +2,13 @@
 
 const crypto = require('crypto');
 const { CloudFormation } = require('@aws-sdk/client-cloudformation');
-const { getAwsClientConfig } = require('../../utils/aws');
+const { getAwsClientConfig, getAwsErrorCode } = require('../../utils/aws');
 const { sleep } = require('../../utils');
 const getConfiguredStateBucketName = require('./get-configured-state-bucket-name');
 const remoteStateCloudFormationTemplate = require('./remote-state-cloudformation-template.json');
 const ServerlessError = require('../../serverless-error');
 
 const COMPOSE_REMOTE_STATE_STACK_NAME = 'serverless-compose-state';
-const getAwsErrorCode = (error) => error && (error.Code || error.code || error.name);
 
 const getCloudFormationClient = (stateConfiguration = {}, context = {}) => {
   // We are enforcing us-east-1 as the intention (that might change in the future if we find a good reason)

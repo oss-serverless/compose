@@ -1,10 +1,8 @@
 'use strict';
 
 const { S3 } = require('@aws-sdk/client-s3');
-const { getAwsClientConfig } = require('../../utils/aws');
+const { getAwsClientConfig, getAwsErrorCode } = require('../../utils/aws');
 const ServerlessError = require('../../serverless-error');
-
-const getAwsErrorCode = (error) => error && (error.Code || error.code || error.name);
 
 const getStateBucketRegion = async (bucketName, stateConfiguration = {}, context = {}) => {
   const client = new S3(

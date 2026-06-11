@@ -7,8 +7,7 @@ const ServerlessError = require('../serverless-error');
 const BaseStateStorage = require('./BaseStateStorage');
 const normalizeState = require('./normalize-state');
 const { buildClientConfig } = require('../utils/aws/config');
-
-const getAwsErrorCode = (error) => error && (error.Code || error.code || error.name);
+const { getAwsErrorCode } = require('../utils/aws');
 
 class S3StateStorage extends BaseStateStorage {
   constructor(config = {}) {
