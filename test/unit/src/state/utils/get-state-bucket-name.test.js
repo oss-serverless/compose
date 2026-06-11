@@ -126,6 +126,47 @@ describe('test/unit/src/state/utils/get-state-bucket-name.test.js', () => {
         getStateBucketName(configuration, context)
       ).to.be.eventually.rejected.and.have.property('code', 'CANNOT_DEPLOY_S3_REMOTE_STATE_STACK');
     });
+
+    it('reuses one CloudFormation client across stack creation polls', async () => {
+      const constructed = [];
+      const describeStacks = sinon.stub();
+      describeStacks.onCall(0).resolves({ Stacks: [{ StackStatus: 'CREATE_IN_PROGRESS' }] });
+      describeStacks.onCall(1).resolves({ Stacks: [{ StackStatus: 'CREATE_COMPLETE' }] });
+      const stackDoesNotExistError = Object.assign(new Error('Stack "test" does not exist'), {
+        Code: 'ValidationError',
+      });
+      class FakeCloudFormation {
+        constructor(config) {
+          constructed.push(config);
+        }
+
+        describeStacks(input) {
+          return describeStacks(input);
+        }
+
+        describeStackResource() {
+          return Promise.reject(stackDoesNotExistError);
+        }
+
+        createStack() {
+          return Promise.resolve({});
+        }
+      }
+      const getStateBucketNameWithStubs = proxyquire(
+        '../../../../../src/state/utils/get-state-bucket-name',
+        {
+          '@aws-sdk/client-cloudformation': { CloudFormation: FakeCloudFormation },
+          '../../utils': { sleep: sinon.stub().resolves() },
+        }
+      );
+
+      expect(await getStateBucketNameWithStubs({ backend: 's3' }, context)).to.match(
+        /^serverless-compose-state-[a-f0-9]{24}$/
+      );
+      expect(describeStacks).to.have.been.calledTwice;
+      // One client for the failed stack lookup, one shared by creation and all polls
+      expect(constructed).to.have.length(2);
+    });
   });
 
   describe('CloudFormation client config', () => {

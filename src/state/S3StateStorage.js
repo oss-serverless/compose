@@ -6,6 +6,7 @@ const streamToString = require('../utils/stream-to-string');
 const ServerlessError = require('../serverless-error');
 const BaseStateStorage = require('./BaseStateStorage');
 const normalizeState = require('./normalize-state');
+const { buildClientConfig } = require('../utils/aws/config');
 
 const getAwsErrorCode = (error) => error && (error.Code || error.code || error.name);
 
@@ -19,8 +20,12 @@ class S3StateStorage extends BaseStateStorage {
     this.bucketName = config.bucketName;
     this.stateKey = config.stateKey;
 
+    // The fallback routes through buildClientConfig so that proxy, CA, timeout, and
+    // retry configuration apply; credential semantics are preserved (the SDK default
+    // chain still applies when no credentials are given)
     this.s3Client = new S3(
-      config.clientConfig || { region: this.region, credentials: config.credentials }
+      config.clientConfig ||
+        buildClientConfig({ region: this.region, credentials: config.credentials })
     );
 
     this.writeRequestQueue = pLimit(1);

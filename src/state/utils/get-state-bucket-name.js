@@ -23,8 +23,7 @@ const getCloudFormationClient = (stateConfiguration = {}, context = {}) => {
   );
 };
 
-const monitorStackCreation = async (stackName, context, stateConfiguration) => {
-  const client = getCloudFormationClient(stateConfiguration, context);
+const monitorStackCreation = async (client, stackName, context) => {
   const describeStacksResponse = await client.describeStacks({ StackName: stackName });
   const status = describeStacksResponse.Stacks[0].StackStatus;
 
@@ -32,7 +31,7 @@ const monitorStackCreation = async (stackName, context, stateConfiguration) => {
     // TODO: REMOVE WHEN REPLACED WITH PROGRESS
     context.logVerbose('Stack deployment in progress');
     await sleep(2000);
-    return await monitorStackCreation(stackName, context, stateConfiguration);
+    return await monitorStackCreation(client, stackName, context);
   }
 
   if (status === 'CREATE_COMPLETE') {
@@ -69,7 +68,7 @@ const ensureRemoteStateBucketStackExists = async (context, stateConfiguration) =
     ],
   });
 
-  await monitorStackCreation(COMPOSE_REMOTE_STATE_STACK_NAME, context, stateConfiguration);
+  await monitorStackCreation(client, COMPOSE_REMOTE_STATE_STACK_NAME, context);
   context.output.log('S3 bucket for remote state created successfully');
   return bucketName;
 };

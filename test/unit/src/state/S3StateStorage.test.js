@@ -174,6 +174,24 @@ describe('test/unit/src/state/S3StateStorage.test.js', () => {
         retryMode: 'standard',
       });
     });
+
+    it('builds transport-aware client config when no client config is given', () => {
+      const S3 = sinon.stub().returns({});
+      const S3StateStorageWithStubbedClient = proxyquire
+        .noCallThru()
+        .load('../../../../src/state/S3StateStorage', {
+          '@aws-sdk/client-s3': { S3 },
+        });
+
+      new S3StateStorageWithStubbedClient({ bucketName, stateKey, region: 'eu-central-1' });
+
+      expect(S3).to.have.been.calledOnce;
+      const config = S3.firstCall.args[0];
+      expect(config.region).to.equal('eu-central-1');
+      expect(config.requestHandler).to.exist;
+      expect(config.maxAttempts).to.be.a('number');
+      expect(config).to.not.have.property('credentials');
+    });
   });
 
   it('serializes concurrent state writes', async () => {
