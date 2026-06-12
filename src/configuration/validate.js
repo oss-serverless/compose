@@ -11,7 +11,7 @@ function validateConfiguration(configuration, configurationPath) {
   if (configuration == null || typeof configuration !== 'object') {
     throw new ServerlessError(
       `Resolved "${configurationFilename}" does not contain valid osls compose configuration.\n` +
-        'Read about osls compose in the documentation: https://github.com/oss-serverless/osls/blob/main/docs/guides/compose.md',
+        'Read about osls compose in the documentation: https://github.com/oss-serverless/osls/blob/4.x/docs/guides/compose.md',
       'INVALID_NON_OBJECT_CONFIGURATION'
     );
   }
@@ -19,7 +19,7 @@ function validateConfiguration(configuration, configurationPath) {
   if (!hasOwn(configuration, 'services') || !isObject(configuration.services)) {
     throw new ServerlessError(
       `Invalid configuration: "${configurationFilename}" must contain "services" property.\n` +
-        'Read about osls compose configuration in the documentation: https://github.com/oss-serverless/osls/blob/main/docs/guides/compose.md',
+        'Read about osls compose configuration in the documentation: https://github.com/oss-serverless/osls/blob/4.x/docs/guides/compose.md',
       'INVALID_NON_OBJECT_SERVICES_CONFIGURATION'
     );
   }
@@ -35,7 +35,7 @@ function validateConfiguration(configuration, configurationPath) {
     if (!isObject(value)) {
       throw new ServerlessError(
         `Invalid configuration: definition of "${key}" service must be an object.\n` +
-          'Read about osls compose configuration in the documentation: https://github.com/oss-serverless/osls/blob/main/docs/guides/compose.md',
+          'Read about osls compose configuration in the documentation: https://github.com/oss-serverless/osls/blob/4.x/docs/guides/compose.md',
         'INVALID_NON_OBJECT_SERVICE_CONFIGURATION'
       );
     }
@@ -73,7 +73,7 @@ function validateConfiguration(configuration, configurationPath) {
   if (extraProperties.length > 0) {
     throw new ServerlessError(
       `Unrecognized property ${extraProperties.join(', ')} in "${configurationFilename}".\n` +
-        'Read about osls compose configuration in the documentation: https://github.com/oss-serverless/osls/blob/main/docs/guides/compose.md',
+        'Read about osls compose configuration in the documentation: https://github.com/oss-serverless/osls/blob/4.x/docs/guides/compose.md',
       'INVALID_CONFIGURATION'
     );
   }
