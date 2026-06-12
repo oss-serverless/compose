@@ -3,6 +3,7 @@
 const YAML = require('js-yaml');
 const path = require('path');
 const spawn = require('../../src/utils/spawn');
+const redactArgs = require('../../src/utils/redact-args');
 const semver = require('semver');
 const calculateCacheHash = require('../../src/utils/cache-hash');
 const { configSchema } = require('./configuration');
@@ -267,7 +268,7 @@ class ServerlessFramework {
       args.push('--region', this.inputs.region);
     }
 
-    this.context.logVerbose(`Running "${command} ${args.join(' ')}"`);
+    this.context.logVerbose(`Running "${command} ${redactArgs(args).join(' ')}"`);
     return new Promise((resolve, reject) => {
       const subprocess = spawn(command, args, {
         cwd: this.inputs.path,

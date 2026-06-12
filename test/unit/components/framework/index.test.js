@@ -119,6 +119,33 @@ describe('test/unit/components/framework/index.test.js', () => {
     expect(context.outputs).to.deep.equal({ Key: 'Output' });
   });
 
+  it('redacts sensitive parameter values in verbose command logging', async () => {
+    const spawnStub = createSpawnStub(createClassicSpawnResult({ stdout: INFO_OUTPUT }));
+    const FrameworkComponent = loadFrameworkComponent(spawnStub);
+
+    const context = await getContext();
+    const logVerbose = sinon.spy(context, 'logVerbose');
+    const component = new FrameworkComponent('some-id', context, {
+      path: 'path',
+      params: { 'api-token': 'secret-value-123' },
+    });
+    context.state.detectedFrameworkVersion = '9.9.9';
+    await component.deploy();
+
+    expectSpawnCall(spawnStub, 0, [
+      'deploy',
+      '--stage',
+      'dev',
+      '--param',
+      'api-token=secret-value-123',
+    ]);
+    const loggedCommands = logVerbose.args.map(([message]) => message);
+    expect(loggedCommands.some((message) => message.includes('api-token=<redacted>'))).to.equal(
+      true
+    );
+    expect(loggedCommands.some((message) => message.includes('secret-value-123'))).to.equal(false);
+  });
+
   it('supports the shared spawn helper promise shape when executing osls commands', async () => {
     const spawnStub = createSpawnStub(
       createSpawnExecution({
