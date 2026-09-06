@@ -10,6 +10,7 @@ describe('test/unit/src/utils/yaml-schema.test.js', () => {
   it('keeps date-shaped plain scalars and mapping keys as strings', () => {
     expect(load('date: 2012-10-17').date).to.equal('2012-10-17');
     expect(load('dateTime: 2020-12-12T00:00:00Z').dateTime).to.equal('2020-12-12T00:00:00Z');
+    expect(load('spaced: 2020-12-12 00:00:00').spaced).to.equal('2020-12-12 00:00:00');
     expect(load('map:\n  2012-10-17: value').map).to.deep.equal({ '2012-10-17': 'value' });
   });
 
