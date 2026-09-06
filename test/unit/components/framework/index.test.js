@@ -196,6 +196,22 @@ describe('test/unit/components/framework/index.test.js', () => {
     expect(context.outputs).to.deep.equal({ Key: 'Output' });
   });
 
+  it('correctly handles refresh-outputs with date-shaped outputs', async () => {
+    const spawnStub = createSpawnStub(
+      createClassicSpawnResult({
+        stdout: 'region: us-east-1\n\nStack Outputs:\n  ReleaseDate: 2026-09-06',
+      })
+    );
+    const FrameworkComponent = loadFrameworkComponent(spawnStub);
+
+    const context = await getContext();
+    const component = new FrameworkComponent('some-id', context, { path: 'path' });
+    context.state.detectedFrameworkVersion = '9.9.9';
+    await component.refreshOutputs();
+
+    expect(context.outputs).to.deep.equal({ ReleaseDate: '2026-09-06' });
+  });
+
   it('correctly recognizes region in inputs', async () => {
     const spawnStub = createSpawnStub(createClassicSpawnResult({ stdout: INFO_OUTPUT }));
     const FrameworkComponent = loadFrameworkComponent(spawnStub);
