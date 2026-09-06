@@ -1,6 +1,7 @@
 'use strict';
 
 const YAML = require('js-yaml');
+const yamlSchema = require('../../src/utils/yaml-schema');
 const path = require('path');
 const spawn = require('../../src/utils/spawn');
 const redactArgs = require('../../src/utils/redact-args');
@@ -162,7 +163,7 @@ class ServerlessFramework {
   async retrieveFunctions() {
     const { stdout: printOutput } = await this.exec('serverless', ['print']);
     try {
-      return YAML.load(printOutput.toString()).functions || {};
+      return YAML.load(printOutput.toString(), { schema: yamlSchema }).functions || {};
     } catch {
       throw new Error(`Could not retrieve functions from configuration:\n${printOutput}`);
     }
@@ -327,7 +328,7 @@ class ServerlessFramework {
   async retrieveOutputs() {
     const { stdout: infoOutput } = await this.exec('serverless', ['info', '--verbose']);
     try {
-      return YAML.load(infoOutput.toString())['Stack Outputs'];
+      return YAML.load(infoOutput.toString(), { schema: yamlSchema })['Stack Outputs'];
     } catch {
       if (infoOutput.toString()) {
         // Try to extract the section with `Stack Outputs` and parse it
@@ -336,7 +337,7 @@ class ServerlessFramework {
         const res = infoOutput.toString().match(/Stack Outputs:\n(( {2}[ \S]+\n)+)/);
         if (res) {
           try {
-            return YAML.load(res[1]);
+            return YAML.load(res[1], { schema: yamlSchema });
           } catch {
             // Pass to generic error
           }

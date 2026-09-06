@@ -41,6 +41,18 @@ describe('test/unit/src/configuration/read.test.js', () => {
     });
   });
 
+  it('should keep date-shaped values as strings', async () => {
+    configurationPath = 'serverless-compose.yml';
+    await fsp.writeFile(
+      configurationPath,
+      'name: test-yml\nservices:\n  resources:\n    path: resources\n    params:\n      policyVersion: 2012-10-17\n'
+    );
+    expect(await readConfiguration(configurationPath)).to.deep.equal({
+      name: 'test-yml',
+      services: { resources: { path: 'resources', params: { policyVersion: '2012-10-17' } } },
+    });
+  });
+
   it('should read "serverless-compose.json"', async () => {
     configurationPath = 'serverless-compose.json';
     const configuration = {

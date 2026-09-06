@@ -5,6 +5,7 @@ const { createRequire } = require('module');
 const path = require('path');
 const fsp = require('fs').promises;
 const yaml = require('js-yaml');
+const yamlSchema = require('../utils/yaml-schema');
 const spawn = require('../utils/spawn');
 const ServerlessError = require('../serverless-error');
 
@@ -86,6 +87,7 @@ const parseConfigurationFile = async (configurationPath) => {
       try {
         return yaml.load(content, {
           filename: configurationPath,
+          schema: yamlSchema,
         });
       } catch (error) {
         throw new ServerlessError(
